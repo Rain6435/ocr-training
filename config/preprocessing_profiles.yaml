@@ -1,0 +1,50 @@
+# Preprocessing profiles for different document types
+# Selected via: pipeline.process(image, profile="default")
+
+profiles:
+  default:
+    deskew_enabled: true
+    denoise_method: "nlm"
+    denoise_strength: 10
+    contrast_clip_limit: 2.0
+    binarize_method: "sauvola"
+    binarize_block_size: 25
+    segment_lines_enabled: true
+    segment_words_enabled: false
+    target_height: 64
+
+  heavy_degradation:
+    # For ancient manuscripts, severely faded/stained documents
+    deskew_enabled: true
+    denoise_method: "nlm"
+    denoise_strength: 15
+    contrast_clip_limit: 3.0
+    binarize_method: "sauvola"
+    binarize_block_size: 35
+    segment_lines_enabled: true
+    segment_words_enabled: false
+    target_height: 64
+
+  modern_print:
+    # For clean printed documents — minimal processing
+    deskew_enabled: true
+    denoise_method: "none"
+    denoise_strength: 0
+    contrast_clip_limit: 0
+    binarize_method: "otsu"
+    binarize_block_size: 25
+    segment_lines_enabled: true
+    segment_words_enabled: false
+    target_height: 64
+
+  handwritten:
+    # Optimized for handwriting — preserve thin strokes
+    deskew_enabled: true
+    denoise_method: "bilateral"
+    denoise_strength: 10
+    contrast_clip_limit: 2.5
+    binarize_method: "sauvola"
+    binarize_block_size: 31
+    segment_lines_enabled: true
+    segment_words_enabled: true
+    target_height: 64

@@ -1,0 +1,41 @@
+# Data
+data/raw/
+data/processed/
+data/difficulty_labels/
+
+# Models
+models/classifier/*.keras
+models/classifier/*.h5
+models/ocr_custom/*.keras
+models/ocr_custom/*.h5
+models/ocr_tflite/*.tflite
+
+# Logs
+logs/tensorboard/
+logs/pipeline/
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+venv/
+.venv/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Environment
+.env
+
+# Jupyter
+.ipynb_checkpoints/
