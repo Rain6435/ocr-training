@@ -79,6 +79,8 @@ def submit_training_job(
     lm_dictionary_path: str = "data/dictionaries/en_dict.txt",
     lm_historical_dict_path: str = "data/dictionaries/historical_en.txt",
     lm_max_edit_distance: int = 2,
+    ocr_processed_prefix: str = "data/processed",
+    ocr_raw_prefix: str = "data/raw/iam",
 ) -> Optional[object]:
     """
     Submit a training job to Vertex AI.
@@ -129,8 +131,8 @@ def submit_training_job(
         args = [
             "src.ocr.custom_model.train",
             "--gcs-bucket", bucket_name,
-            "--gcs-processed-prefix", "data/processed",
-            "--gcs-raw-prefix", "data/raw",
+            "--gcs-processed-prefix", ocr_processed_prefix,
+            "--gcs-raw-prefix", ocr_raw_prefix,
             "--epochs", str(epochs),
             "--batch-size", str(batch_size),
             "--grad-clip-norm", str(grad_clip_norm),
@@ -146,7 +148,7 @@ def submit_training_job(
                 "--lm-historical-dict-path", lm_historical_dict_path,
                 "--lm-max-edit-distance", str(lm_max_edit_distance),
             ])
-        data_location = f"gs://{bucket_name}/data/processed + gs://{bucket_name}/data/raw"
+        data_location = f"gs://{bucket_name}/{ocr_processed_prefix} + gs://{bucket_name}/{ocr_raw_prefix}"
         result_location = f"gs://{bucket_name}/aiplatform-custom-training-*"
     else:
         args = [
@@ -343,6 +345,16 @@ Examples:
         default=2,
         help="Max edit distance for LM post-correction",
     )
+    parser.add_argument(
+        "--ocr-processed-prefix",
+        default="data/processed",
+        help="GCS processed manifest prefix for OCR training",
+    )
+    parser.add_argument(
+        "--ocr-raw-prefix",
+        default="data/raw/iam",
+        help="GCS raw image prefix for OCR training (default IAM-only)",
+    )
     
     args = parser.parse_args()
     
@@ -367,4 +379,6 @@ Examples:
         lm_dictionary_path=args.lm_dictionary_path,
         lm_historical_dict_path=args.lm_historical_dict_path,
         lm_max_edit_distance=args.lm_max_edit_distance,
+        ocr_processed_prefix=args.ocr_processed_prefix,
+        ocr_raw_prefix=args.ocr_raw_prefix,
     )
