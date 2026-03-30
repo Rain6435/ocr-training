@@ -93,3 +93,27 @@ class SpellCorrector:
             "corrections": corrections,
             "num_corrections": len(corrections),
         }
+
+    def correct_compound(self, text: str, max_edit_distance: int = None) -> dict:
+        """
+        Context-aware correction using SymSpell's lookup_compound.
+
+        This is better than isolated per-word correction when OCR outputs have
+        split/merged words or context-dependent substitutions.
+        """
+        if max_edit_distance is None:
+            max_edit_distance = self.max_edit_distance
+
+        suggestions = self.sym_spell.lookup_compound(
+            text,
+            max_edit_distance=max_edit_distance,
+            transfer_casing=True,
+        )
+
+        corrected = suggestions[0].term if suggestions else text
+        return {
+            "original": text,
+            "corrected": corrected,
+            "corrections": [],
+            "num_corrections": 0 if corrected == text else 1,
+        }

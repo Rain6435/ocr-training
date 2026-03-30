@@ -21,6 +21,11 @@ COPY . .
 # (In production, mount as volume or download from S3)
 COPY models/ /app/models/
 
+# Copy entrypoint script
+COPY docker_entrypoint.sh /app/entrypoint.sh
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 8000 8501 6006
 
-CMD ["uvicorn", "src.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+ENTRYPOINT ["/app/entrypoint.sh"]
+CMD []

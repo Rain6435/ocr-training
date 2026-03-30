@@ -2,6 +2,7 @@ import tensorflow as tf
 import numpy as np
 import pandas as pd
 import cv2
+import os
 
 from src.ocr.custom_model.vocabulary import encode_text, NUM_CLASSES
 from src.ocr.custom_model.augmentation import augment_ocr_image
@@ -31,7 +32,7 @@ def create_ocr_dataset(
     """
     df = pd.read_csv(csv_path)
 
-    image_paths = df["image_path"].values
+    image_paths = df["image_path"].astype(str).values
     transcriptions = df["transcription"].values
 
     # Pre-encode labels
@@ -44,6 +45,27 @@ def create_ocr_dataset(
             valid_indices.append(i)
 
     image_paths = image_paths[valid_indices]
+    image_paths = np.array([os.path.normpath(p.replace("\\", "/")) for p in image_paths])
+
+    # In cloud training, some manifests may reference files that are not present yet.
+    # Filter missing files instead of crashing, but fail fast if nothing remains.
+    exists_mask = np.array([os.path.exists(p) for p in image_paths], dtype=bool)
+    missing_count = int((~exists_mask).sum())
+    if missing_count > 0:
+        kept_count = int(exists_mask.sum())
+        print(
+            f"Warning: {missing_count} image files from manifest are missing; "
+            f"continuing with {kept_count} available samples."
+        )
+
+    image_paths = image_paths[exists_mask]
+    encoded_labels = [label for label, keep in zip(encoded_labels, exists_mask) if keep]
+
+    if len(image_paths) == 0:
+        raise FileNotFoundError(
+            "No usable OCR images were found after filtering missing files. "
+            "Ensure raw OCR assets are available at the paths listed in CSV manifests."
+        )
 
     # Pad labels to max_label_length
     padded_labels = np.zeros((len(encoded_labels), max_label_length), dtype=np.int32)
