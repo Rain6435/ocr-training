@@ -64,7 +64,26 @@ def _prepare_local_data(
     val_csv: str,
     test_csv: str,
 ) -> tuple[str, str, str]:
-    """Optionally sync OCR manifests/raw data from GCS for Vertex training."""
+    """Use local OCR data when present; otherwise sync from GCS if configured."""
+    local_train_csv = os.path.join(gcs_processed_prefix, "train.csv")
+    local_val_csv = os.path.join(gcs_processed_prefix, "val.csv")
+    local_test_csv = os.path.join(gcs_processed_prefix, "test.csv")
+    local_raw_root = os.path.normpath(gcs_raw_prefix)
+
+    has_local_manifests = (
+        os.path.exists(local_train_csv)
+        and os.path.exists(local_val_csv)
+        and os.path.exists(local_test_csv)
+    )
+    has_local_raw = os.path.isdir(local_raw_root) and any(os.scandir(local_raw_root))
+
+    if has_local_manifests and has_local_raw:
+        print(
+            "Using local OCR data from container image "
+            f"({gcs_processed_prefix}, {gcs_raw_prefix}); skipping GCS sync."
+        )
+        return local_train_csv, local_val_csv, local_test_csv
+
     if not gcs_bucket:
         return train_csv, val_csv, test_csv
 
@@ -74,9 +93,6 @@ def _prepare_local_data(
     print(f"Downloaded {processed_count} processed files from gs://{gcs_bucket}/{gcs_processed_prefix}")
     print(f"Downloaded {raw_count} raw files from gs://{gcs_bucket}/{gcs_raw_prefix}")
 
-    local_train_csv = os.path.join(gcs_processed_prefix, "train.csv")
-    local_val_csv = os.path.join(gcs_processed_prefix, "val.csv")
-    local_test_csv = os.path.join(gcs_processed_prefix, "test.csv")
     return local_train_csv, local_val_csv, local_test_csv
 
 
