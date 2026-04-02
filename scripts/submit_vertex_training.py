@@ -81,6 +81,8 @@ def submit_training_job(
     lm_max_edit_distance: int = 2,
     ocr_processed_prefix: str = "data/processed",
     ocr_raw_prefix: str = "data/raw/iam",
+    degrade_probability: float = 0.0,
+    sync: bool = False,
 ) -> Optional[object]:
     """
     Submit a training job to Vertex AI.
@@ -107,6 +109,15 @@ def submit_training_job(
     if not gpu_type and gpu_count != 0:
         raise ValueError("gpu_count must be 0 when gpu_type is not provided")
 
+    # Vertex custom training does not currently accept c3/c4 families for this workflow.
+    # Fail fast with a clear suggestion instead of surfacing a long gRPC traceback.
+    normalized_machine = machine_type.strip().lower()
+    if normalized_machine.startswith("c3-") or normalized_machine.startswith("c4-"):
+        raise ValueError(
+            f"Machine type '{machine_type}' is not supported for this Vertex custom training job in this setup. "
+            "Use a supported type such as n2-highmem-16, n2-standard-16, or n1-standard-8."
+        )
+
     # L4 is supported on g2 machine families, not n1.
     if gpu_type == "NVIDIA_L4" and machine_type.startswith("n1-"):
         print("[INFO] NVIDIA_L4 requested with n1 machine type; switching to g2-standard-8.")
@@ -127,6 +138,7 @@ def submit_training_job(
     
     # Dockerfile.training uses ENTRYPOINT ["python", "-m"].
     # Vertex args override CMD, so the module path must be the first arg.
+    args: list[str | float | int]
     if task == "ocr":
         args = [
             "src.ocr.custom_model.train",
@@ -139,6 +151,7 @@ def submit_training_job(
             "--val-metric-batches", str(val_metric_batches),
             "--metric-decode-strategy", metric_decode_strategy,
             "--metric-beam-width", str(metric_beam_width),
+            "--degrade-probability", str(degrade_probability),
         ]
         if enable_lm_post_correction:
             args.extend([
@@ -182,6 +195,7 @@ def submit_training_job(
         print(f"Metric Decode:    {metric_decode_strategy} (beam_width={metric_beam_width})")
         print(f"Val Metric Batches: {val_metric_batches}")
         print(f"LM Post-Correction: {'enabled' if enable_lm_post_correction else 'disabled'}")
+        print(f"Document Degradation: probability={degrade_probability:.2f} (0.0=off, 1.0=max)")
     print(f"Data:             {data_location}")
     print("=" * 80)
     print()
@@ -200,7 +214,7 @@ def submit_training_job(
                 machine_type=machine_type,
                 accelerator_type=gpu_type if gpu_type else "ACCELERATOR_TYPE_UNSPECIFIED",
                 accelerator_count=gpu_count if gpu_type else 0,
-                sync=False,
+                sync=sync,
                 create_request_timeout=300.0,
             )
         except Exception as submit_error:
@@ -215,7 +229,8 @@ def submit_training_job(
         except RuntimeError:
             resource_name = None
 
-        print(f"\n[DEBUG] job.run() returned: {type(model)}")
+        print(f"\n[DEBUG] sync mode: {sync}")
+        print(f"[DEBUG] job.run() returned: {type(model)}")
         print(f"[DEBUG] training pipeline resource: {resource_name}")
         
         print()
@@ -223,6 +238,9 @@ def submit_training_job(
         print("TRAINING JOB SUBMITTED SUCCESSFULLY!")
         print("=" * 80)
         print()
+        if sync:
+            print("Synchronous mode enabled: command waited for Vertex job completion.")
+            print()
         if resource_name:
             job_id = resource_name.split('/')[-1]
             print(f"Job Resource Name:")
@@ -355,6 +373,17 @@ Examples:
         default="data/raw/iam",
         help="GCS raw image prefix for OCR training (default IAM-only)",
     )
+    parser.add_argument(
+        "--degrade-probability",
+        type=float,
+        default=0.0,
+        help="(OCR only) Probability to apply document degradation (JPEG/blur/fade) (0.0-1.0, default 0.0)",
+    )
+    parser.add_argument(
+        "--sync",
+        action="store_true",
+        help="Wait for Vertex job completion instead of returning immediately after submission",
+    )
     
     args = parser.parse_args()
     
@@ -381,4 +410,6 @@ Examples:
         lm_max_edit_distance=args.lm_max_edit_distance,
         ocr_processed_prefix=args.ocr_processed_prefix,
         ocr_raw_prefix=args.ocr_raw_prefix,
+        degrade_probability=args.degrade_probability,
+        sync=args.sync,
     )

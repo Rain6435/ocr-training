@@ -6,7 +6,7 @@ from src.preprocessing.deskew import deskew
 from src.preprocessing.binarize import adaptive_binarize
 from src.preprocessing.denoise import denoise
 from src.preprocessing.contrast import enhance_contrast
-from src.preprocessing.segment import segment_lines, segment_words
+from src.preprocessing.segment import segment_lines, segment_words, segment_columns_with_boxes
 from src.preprocessing.pipeline import PreprocessingPipeline, PreprocessingConfig
 
 
@@ -111,6 +111,17 @@ class TestSegment:
         cv2.rectangle(line, (150, 5), (190, 25), 0, -1)
         words = segment_words(line)
         assert len(words) >= 1
+
+    def test_segment_columns_with_boxes(self):
+        img = np.full((120, 360), 255, dtype=np.uint8)
+        cv2.rectangle(img, (20, 10), (140, 110), 0, -1)
+        cv2.rectangle(img, (220, 10), (340, 110), 0, -1)
+
+        columns = segment_columns_with_boxes(img, min_column_width=40)
+        assert len(columns) >= 2
+        first_box = columns[0][1]
+        second_box = columns[1][1]
+        assert first_box[0] < second_box[0]
 
 
 class TestPipeline:

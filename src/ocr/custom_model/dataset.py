@@ -16,6 +16,8 @@ def create_ocr_dataset(
     max_label_length: int = 64,
     augment: bool = True,
     shuffle: bool = True,
+    degrade_probability: float = 0.0,
+    degrade_params: dict = None,
 ) -> tf.data.Dataset:
     """
     Creates tf.data.Dataset from a CSV manifest for OCR training.
@@ -29,6 +31,17 @@ def create_ocr_dataset(
             "input_length": (batch, 1),
             "label_length": (batch, 1),
         }
+        
+    Args:
+        csv_path: Path to training CSV manifest
+        batch_size: Batch size
+        img_height: Target image height
+        img_width: Target image width
+        max_label_length: Maximum label length
+        augment: Whether to apply augmentations
+        shuffle: Whether to shuffle dataset
+        degrade_probability: Probability to apply document degradation (0.0-1.0)
+        degrade_params: Dict with degradation parameters (see augment_ocr_image)
     """
     df = pd.read_csv(csv_path)
 
@@ -103,7 +116,11 @@ def create_ocr_dataset(
         for idx in indices:
             img = load_image(idx)
             if augment:
-                img = augment_ocr_image(img)
+                img = augment_ocr_image(
+                    img,
+                    degrade_probability=degrade_probability,
+                    degrade_params=degrade_params,
+                )
             img = img.astype(np.float32) / 255.0
             img = np.expand_dims(img, axis=-1)  # (H, W, 1)
             yield (

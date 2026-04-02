@@ -218,6 +218,7 @@ def train_ocr(
     gcs_bucket: str | None = None,
     gcs_processed_prefix: str = "data/processed",
     gcs_raw_prefix: str = "data/raw",
+    degrade_probability: float = 0.0,
 ):
     """Train the custom CRNN-CTC OCR model."""
     train_csv, val_csv, test_csv = _prepare_local_data(
@@ -237,7 +238,22 @@ def train_ocr(
 
     # Load datasets
     print("Loading datasets...")
-    train_ds = create_ocr_dataset(train_csv, batch_size=batch_size, augment=True, shuffle=True)
+    print(f"Document degradation: probability={degrade_probability:.2f}")
+    train_ds = create_ocr_dataset(
+        train_csv,
+        batch_size=batch_size,
+        augment=True,
+        shuffle=True,
+        degrade_probability=degrade_probability,
+        degrade_params={
+            "jpeg_p": 0.4,
+            "blur_p": 0.5,
+            "fade_p": 0.6,
+            "jpeg_quality_range": (40, 80),
+            "blur_sigma_range": (0.8, 2.5),
+            "fade_alpha_range": (0.5, 0.9),
+        },
+    )
     val_ds = create_ocr_dataset(val_csv, batch_size=batch_size, augment=False, shuffle=False)
 
     # Build model
@@ -405,6 +421,12 @@ if __name__ == "__main__":
     parser.add_argument("--gcs-bucket", default=None, help="Optional GCS bucket to sync OCR data from")
     parser.add_argument("--gcs-processed-prefix", default="data/processed", help="GCS prefix for OCR CSV manifests")
     parser.add_argument("--gcs-raw-prefix", default="data/raw", help="GCS prefix for OCR raw images")
+    parser.add_argument(
+        "--degrade-probability",
+        type=float,
+        default=0.0,
+        help="Probability to apply document degradation (JPEG/blur/fade) to training samples (0.0-1.0)",
+    )
     args = parser.parse_args()
 
     train_ocr(
@@ -426,4 +448,5 @@ if __name__ == "__main__":
         gcs_bucket=args.gcs_bucket,
         gcs_processed_prefix=args.gcs_processed_prefix,
         gcs_raw_prefix=args.gcs_raw_prefix,
+        degrade_probability=args.degrade_probability,
     )

@@ -3,12 +3,16 @@
 
 routing:
   # Confidence thresholds for difficulty classifier
-  easy_threshold: 0.7      # Above this → route to Tesseract
-  hard_threshold: 0.6      # Above this → route to TrOCR
+  easy_threshold: 0.7 # Above this → route to Tesseract
+  hard_threshold: 0.6 # Above this → route to TrOCR
+  hard_direct_threshold: 0.8 # Require stronger confidence before direct hard routing
+  hard_margin_over_easy: 0.15 # Hard prob must exceed easy prob by this margin
+  min_width_for_hard: 280 # Prefer medium for short snippets/word crops
+  hard_override_confidence: 0.92 # Allow hard route for very confident hard predictions
   # If neither confident → route to custom model (medium)
 
   # Fallback: if primary engine confidence is low, escalate
-  escalation_threshold: 0.5  # Below this → try next-higher engine
+  escalation_threshold: 0.5 # Below this → try next-higher engine
 
   # Cost optimization
   enable_cost_optimization: true
@@ -16,10 +20,10 @@ routing:
 
 # Cost model per image (for benchmarking)
 cost_model:
-  tesseract: 0.0          # CPU only, free
-  custom_crnn: 0.001      # Minimal GPU cost
-  trocr: 0.05             # Heavy GPU inference
-  paddleocr: 0.02         # Medium GPU inference
-  cloud_api: 0.10         # E.g., Google Cloud Vision per page
+  tesseract: 0.0 # CPU only, free
+  custom_crnn: 0.001 # Minimal GPU cost
+  trocr: 0.05 # Heavy GPU inference
+  paddleocr: 0.02 # Medium GPU inference
+  cloud_api: 0.10 # E.g., Google Cloud Vision per page
   classifier_overhead: 0.0001
   preprocessing_overhead: 0.0005

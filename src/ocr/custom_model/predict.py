@@ -20,10 +20,12 @@ class CustomOCREngine:
         img_height: int = 64,
         img_width: int = 256,
         beam_width: int = 10,
+        second_pass_threshold: float = 0.65,
     ):
         self.img_height = img_height
         self.img_width = img_width
         self.beam_width = beam_width
+        self.second_pass_threshold = second_pass_threshold
         self.use_tflite = use_tflite
 
         self.model_path = model_path
@@ -47,12 +49,40 @@ class CustomOCREngine:
             self.model.predict(dummy, verbose=0)
         self._loaded = True
 
+    @staticmethod
+    def _normalize_polarity(gray: np.ndarray) -> np.ndarray:
+        """Normalize image to black text on white background for CRNN stability."""
+        _, binary = cv2.threshold(gray, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+        white_count = int(np.count_nonzero(binary == 255))
+        black_count = int(np.count_nonzero(binary == 0))
+
+        background_is_white = white_count >= black_count
+        return gray if background_is_white else cv2.bitwise_not(gray)
+
+    @staticmethod
+    def _crop_foreground(gray: np.ndarray, pad: int = 2) -> np.ndarray:
+        """Crop around foreground strokes to reduce empty margins before resize."""
+        inv = 255 - gray
+        ys, xs = np.where(inv > 20)
+        if ys.size == 0 or xs.size == 0:
+            return gray
+
+        y1 = max(int(ys.min()) - pad, 0)
+        y2 = min(int(ys.max()) + pad + 1, gray.shape[0])
+        x1 = max(int(xs.min()) - pad, 0)
+        x2 = min(int(xs.max()) + pad + 1, gray.shape[1])
+        cropped = gray[y1:y2, x1:x2]
+        return cropped if cropped.size > 0 else gray
+
     def preprocess(self, image: np.ndarray) -> np.ndarray:
         """Resize, pad, and normalize image for model input."""
         if len(image.shape) == 3:
             gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
         else:
             gray = image.copy()
+
+        gray = self._normalize_polarity(gray)
+        gray = self._crop_foreground(gray)
 
         h, w = gray.shape
         scale = self.img_height / h
@@ -70,6 +100,60 @@ class CustomOCREngine:
         normalized = resized.astype(np.float32) / 255.0
         return normalized.reshape(1, self.img_height, self.img_width, 1)
 
+    @staticmethod
+    def _enhance_variant(gray: np.ndarray) -> np.ndarray:
+        """Create a lightly enhanced variant to recover faint strokes."""
+        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
+        enhanced = clahe.apply(gray)
+        return enhanced
+
+    def _prepare_base_image(self, image: np.ndarray) -> np.ndarray:
+        """Prepare base grayscale image with normalized polarity and tight crop."""
+        if len(image.shape) == 3:
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        else:
+            gray = image.copy()
+
+        base = self._normalize_polarity(gray)
+        base = self._crop_foreground(base)
+        return base
+
+    def _build_input_variants(self, image: np.ndarray) -> list[np.ndarray]:
+        """Build normalized model-ready input variants for robust decoding."""
+        base = self._prepare_base_image(image)
+
+        enhanced = self._enhance_variant(base)
+
+        variants = [self.preprocess(base), self.preprocess(enhanced)]
+        return variants
+
+    def _decode_prediction(self, y_pred: np.ndarray) -> tuple[str, float]:
+        """Decode logits and return (text, confidence) tuple."""
+        if self.beam_width > 1:
+            texts = ctc_beam_search_decode(y_pred, beam_width=self.beam_width)
+        else:
+            texts = ctc_greedy_decode(y_pred)
+
+        confidences = compute_ctc_confidence(y_pred)
+        text = texts[0] if texts else ""
+        confidence = confidences[0] if confidences else 0.0
+        return text, float(confidence)
+
+    def _predict_logits(self, input_tensor: np.ndarray) -> np.ndarray:
+        """Run model inference and return logits/probabilities tensor."""
+        if self.use_tflite:
+            self.interpreter.set_tensor(self.input_details[0]["index"], input_tensor)
+            self.interpreter.invoke()
+            return self.interpreter.get_tensor(self.output_details[0]["index"])
+        return self.model.predict(input_tensor, verbose=0)
+
+    @staticmethod
+    def _select_best_candidate(candidates: list[tuple[str, float]]) -> tuple[str, float]:
+        """Prefer non-empty decode, then highest confidence among candidates."""
+        non_empty = [c for c in candidates if c[0].strip()]
+        pool = non_empty if non_empty else candidates
+        return max(pool, key=lambda item: item[1])
+
     def recognize(self, image: np.ndarray) -> dict:
         """
         Run OCR on a single image.
@@ -83,26 +167,26 @@ class CustomOCREngine:
             }
         """
         self._ensure_loaded()
-        input_tensor = self.preprocess(image)
+        base = self._prepare_base_image(image)
+        base_tensor = self.preprocess(base)
+        base_text, base_confidence = self._decode_prediction(self._predict_logits(base_tensor))
 
-        if self.use_tflite:
-            self.interpreter.set_tensor(self.input_details[0]["index"], input_tensor)
-            self.interpreter.invoke()
-            y_pred = self.interpreter.get_tensor(self.output_details[0]["index"])
+        needs_second_pass = (not base_text.strip()) or (base_confidence < self.second_pass_threshold)
+        if needs_second_pass:
+            enhanced = self._enhance_variant(base)
+            enhanced_tensor = self.preprocess(enhanced)
+            enhanced_text, enhanced_confidence = self._decode_prediction(
+                self._predict_logits(enhanced_tensor)
+            )
+            best_text, best_confidence = self._select_best_candidate(
+                [(base_text, base_confidence), (enhanced_text, enhanced_confidence)]
+            )
         else:
-            y_pred = self.model.predict(input_tensor, verbose=0)
-
-        # Decode
-        if self.beam_width > 1:
-            texts = ctc_beam_search_decode(y_pred, beam_width=self.beam_width)
-        else:
-            texts = ctc_greedy_decode(y_pred)
-
-        confidences = compute_ctc_confidence(y_pred)
+            best_text, best_confidence = base_text, base_confidence
 
         return {
-            "text": texts[0] if texts else "",
-            "confidence": confidences[0] if confidences else 0.0,
+            "text": best_text,
+            "confidence": best_confidence,
             "engine": "custom_crnn",
             "cost": 0.001,
         }

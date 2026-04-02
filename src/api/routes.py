@@ -8,7 +8,7 @@ from fastapi import APIRouter, UploadFile, File, Query, HTTPException
 from fastapi.responses import StreamingResponse, JSONResponse
 
 from src.api.schemas import (
-    OCRResult, BatchResult, PipelineStats, RoutingConfigUpdate, DifficultyLevel,
+    OCRResult, BatchResult, PipelineStats, RoutingConfigUpdate, DifficultyLevel, PageOCRResult,
 )
 from src.api.dependencies import (
     get_preprocessing_pipeline, get_router, get_spell_corrector,
@@ -17,6 +17,7 @@ from src.api.dependencies import (
 from src.routing.router import RoutingConfig
 from src.postprocessing.pdf_generator import create_searchable_pdf
 from src.postprocessing.tei_xml import generate_tei_xml
+from src.ocr.page_pipeline import process_page
 
 router = APIRouter(prefix="/api/v1")
 
@@ -152,6 +153,65 @@ async def process_batch(
     )
 
     return BatchResult(results=results, summary=summary)
+
+
+@router.post("/ocr/page", response_model=PageOCRResult)
+async def process_page_image(
+    file: UploadFile = File(...),
+    profile: str = Query("handwritten"),
+    force_engine: str = Query(None, enum=["tesseract", "custom", "trocr"]),
+    segmentation_mode: str = Query("auto", enum=["auto", "projection", "single"]),
+    output_format: str = Query("json", enum=["json", "text", "tei-xml"]),
+):
+    """Process a full page image by segmenting into lines and running per-line OCR."""
+    image = await read_image(file)
+
+    pipeline = get_preprocessing_pipeline()
+    ocr_router = get_router()
+    spell = get_spell_corrector()
+    scorer = get_confidence_scorer()
+
+    page_result = process_page(
+        image=image,
+        preprocessing_pipeline=pipeline,
+        ocr_router=ocr_router,
+        spell_corrector=spell,
+        confidence_scorer=scorer,
+        profile=profile,
+        force_engine=force_engine,
+        segmentation_mode=segmentation_mode,
+    )
+
+    if output_format == "tei-xml":
+        with tempfile.TemporaryDirectory() as tmpdir:
+            xml_path = os.path.join(tmpdir, "output.xml")
+            generate_tei_xml(
+                text=page_result["text"],
+                metadata={
+                    "title": file.filename or "OCR Page Transcription",
+                    "engine_used": "mixed",
+                    "confidence": page_result.get("confidence", 0.0),
+                    "image_width": image.shape[1],
+                    "image_height": image.shape[0],
+                    "regions": page_result.get("lines", []),
+                },
+                output_path=xml_path,
+            )
+            with open(xml_path, "rb") as f:
+                xml_bytes = f.read()
+        return StreamingResponse(
+            io.BytesIO(xml_bytes),
+            media_type="application/xml",
+            headers={"Content-Disposition": "attachment; filename=ocr_page_result.xml"},
+        )
+
+    if output_format == "text":
+        return StreamingResponse(
+            io.BytesIO(page_result["text"].encode("utf-8")),
+            media_type="text/plain",
+        )
+
+    return PageOCRResult(**page_result)
 
 
 @router.get("/stats", response_model=PipelineStats)

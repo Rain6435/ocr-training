@@ -19,6 +19,40 @@ class OCRResult(BaseModel):
     corrections_applied: int
 
 
+class BoundingBox(BaseModel):
+    x1: int
+    y1: int
+    x2: int
+    y2: int
+
+
+class PageLineResult(BaseModel):
+    line_index: int
+    column_index: int
+    bbox: BoundingBox
+    text: str
+    confidence: float
+    engine_used: str
+    difficulty: DifficultyLevel
+    processing_time_ms: float
+    cost: float
+    needs_review: bool
+    corrections_applied: int
+
+
+class PageOCRResult(BaseModel):
+    text: str
+    confidence: float
+    processing_time_ms: float
+    cost: float
+    needs_review: bool
+    num_lines: int
+    num_columns: int
+    profile: str
+    segmentation_mode: str
+    lines: list[PageLineResult]
+
+
 class PipelineStats(BaseModel):
     total_processed: int
     easy_count: int

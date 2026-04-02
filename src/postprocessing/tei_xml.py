@@ -3,6 +3,7 @@ from lxml import etree
 
 
 TEI_NS = "http://www.tei-c.org/ns/1.0"
+XML_NS = "http://www.w3.org/XML/1998/namespace"
 NSMAP = {None: TEI_NS}
 
 
@@ -52,21 +53,79 @@ def generate_tei_xml(
     body = etree.SubElement(text_elem, "body")
     div = etree.SubElement(body, "div")
 
-    # Split text into lines
-    lines = text.split("\n") if text else [""]
-    p = etree.SubElement(div, "p")
+    regions = metadata.get("regions")
+    if isinstance(regions, list) and regions:
+        facsimile = etree.SubElement(tei, "facsimile")
+        surface = etree.SubElement(
+            facsimile,
+            "surface",
+            attrib={f"{{{XML_NS}}}id": "page_1", "n": "1"},
+        )
+        if "image_width" in metadata and "image_height" in metadata:
+            surface.set("lrx", str(int(metadata["image_width"])))
+            surface.set("lry", str(int(metadata["image_height"])))
 
-    for i, line in enumerate(lines):
-        if i > 0:
-            etree.SubElement(p, "lb")
-        # Add text content
-        if i == 0:
-            p.text = line
-        else:
-            # Text after <lb/> goes in tail
-            lb_elements = p.findall("lb")
-            if lb_elements:
-                lb_elements[-1].tail = line
+        p = etree.SubElement(div, "p")
+        line_refs = []
+        for region in regions:
+            bbox = region.get("bbox") if isinstance(region, dict) else None
+            if not isinstance(bbox, dict):
+                continue
+
+            line_index = int(region.get("line_index", len(line_refs)))
+            line_id = f"line_{line_index}"
+
+            x = int(bbox.get("x", 0))
+            y = int(bbox.get("y", 0))
+            w = int(bbox.get("w", 0))
+            h = int(bbox.get("h", 0))
+
+            etree.SubElement(
+                surface,
+                "zone",
+                attrib={
+                    f"{{{XML_NS}}}id": line_id,
+                    "type": "line",
+                    "ulx": str(x),
+                    "uly": str(y),
+                    "lrx": str(x + w),
+                    "lry": str(y + h),
+                },
+            )
+
+            line_elem = etree.SubElement(
+                p,
+                "l",
+                attrib={"corresp": f"#{line_id}", "n": str(line_index)},
+            )
+            line_elem.text = str(region.get("text", ""))
+            line_refs.append(line_id)
+
+        if not line_refs:
+            lines = text.split("\n") if text else [""]
+            p = etree.SubElement(div, "p")
+            for i, line in enumerate(lines):
+                if i > 0:
+                    etree.SubElement(p, "lb")
+                if i == 0:
+                    p.text = line
+                else:
+                    lb_elements = p.findall("lb")
+                    if lb_elements:
+                        lb_elements[-1].tail = line
+    else:
+        lines = text.split("\n") if text else [""]
+        p = etree.SubElement(div, "p")
+
+        for i, line in enumerate(lines):
+            if i > 0:
+                etree.SubElement(p, "lb")
+            if i == 0:
+                p.text = line
+            else:
+                lb_elements = p.findall("lb")
+                if lb_elements:
+                    lb_elements[-1].tail = line
 
     # Write
     tree = etree.ElementTree(tei)
