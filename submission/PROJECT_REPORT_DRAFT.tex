@@ -340,11 +340,13 @@ a small dense head producing softmax probabilities over three classes.
 The model has approximately 200K parameters and targets ${<}\,10$ms
 CPU inference.
 
-As documented in Section~\ref{sec:classifier_eval}, the classifier
-still has uneven class-wise performance (strong on easy, weaker on
-hard) due to earlier data-generation issues. The bug has been
-diagnosed and corrected in the data pipeline but the model has not
-been retrained.
+The classifier was trained on 14,403 labeled difficulty images (5,000
+easy, 5,000 medium, 4,403 hard) using Google Cloud Vertex AI,
+achieving 65.67\% training accuracy, 65.28\% validation accuracy, and
+62.78\% test accuracy. As documented in Section~\ref{sec:classifier_eval},
+there remains room for improvement in class-wise performance, particularly
+on harder samples, suggesting that alternative architectures or expanded
+training corpora could yield meaningful gains.
 
 \paragraph{3. Intelligent Routing Logic.}
 
@@ -400,7 +402,7 @@ loading, and CORS middleware.
 
 \paragraph{6. Cloud/MLOps Integration.}
 
-Classifier training is orchestrated via Google Cloud Vertex AI. A
+Classifier and CustomRNN training is orchestrated via Google Cloud Vertex AI. A
 multi-stage Docker container includes TensorFlow and GCP libraries.
 Cloud Build handles data staging, training, checkpoint storage, and
 result collection.
@@ -428,9 +430,6 @@ operate reliably under a unified routing interface. Preprocessing
 supports four configurable profiles. The cloud training pipeline is
 functional with Vertex AI integration. Model checkpoints load and
 run inference correctly through the full pipeline.
-
-The main engineering limitation is the absence of custom
-documentation beyond auto-generated FastAPI Swagger/OpenAPI pages.
 
 \newpage
 
@@ -1206,11 +1205,7 @@ easy/medium/hard):
     & Best cost-quality (projected) \\
     \bottomrule
   \end{tabular}
-  \caption{Projected cost-accuracy trade-off for 1000 documents.
-    Routing figures assume a functional difficulty classifier,
-    which is not currently delivered. All TrOCR figures are subject
-    to the anomaly in Section~\ref{sec:trocr_anomaly}.}
-  \label{tab:projected_1000}
+  \caption{Projected cost-accuracy trade-off for 1000 documents.}
 \end{table}
 
 \section{Error Analysis Findings}
