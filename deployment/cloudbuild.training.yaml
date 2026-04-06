@@ -1,0 +1,13 @@
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - Dockerfile.training
+      - -t
+      - ${_IMAGE_URI}
+      - .
+images:
+  - ${_IMAGE_URI}
+substitutions:
+  _IMAGE_URI: us-central1-docker.pkg.dev/ocr-training-491603/vertex-ai/ocr-classifier-training:latest

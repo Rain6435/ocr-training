@@ -90,12 +90,17 @@ def _augment(image, label):
     return image, label
 
 
-def simulate_degradation(image: np.ndarray, rng: np.random.Generator = None) -> np.ndarray:
+def simulate_degradation(image: np.ndarray, rng: np.random.Generator = None, intensity: str = "normal") -> np.ndarray:
     """
     Apply random degradation to create 'hard' difficulty samples.
 
     Combines: blur, salt-and-pepper noise, brightness reduction,
     dilation (ink bleeding), and partial occlusion.
+    
+    Args:
+        image: Input grayscale image
+        rng: Random number generator
+        intensity: 'light', 'normal', or 'heavy' degradation intensity
     """
     if rng is None:
         rng = np.random.default_rng()
@@ -103,38 +108,45 @@ def simulate_degradation(image: np.ndarray, rng: np.random.Generator = None) -> 
     result = image.copy()
     h, w = result.shape[:2]
 
-    # Gaussian blur
-    if rng.random() > 0.3:
-        ksize = rng.choice([5, 7, 9, 11])
+    # Degradation intensity scaling
+    intensity_map = {"light": 0.5, "normal": 1.0, "heavy": 1.8}
+    scale = intensity_map.get(intensity, 1.0)
+
+    # Gaussian blur (INCREASED for heavy/hard class)
+    if rng.random() > (0.2 / scale):  # More likely with heavy intensity
+        ksize = rng.choice([5, 7, 9, 11, 13])
         result = cv2.GaussianBlur(result, (ksize, ksize), 0)
 
-    # Salt-and-pepper noise
-    if rng.random() > 0.3:
-        density = rng.uniform(0.05, 0.15)
+    # Salt-and-pepper noise (INCREASED density for hard)
+    if rng.random() > (0.25 / scale):
+        density = rng.uniform(0.05 * scale, 0.25 * scale)  # Up to 25% for heavy
         num_pixels = int(h * w * density)
         coords = (rng.integers(0, h, num_pixels), rng.integers(0, w, num_pixels))
         result[coords] = 255
         coords = (rng.integers(0, h, num_pixels), rng.integers(0, w, num_pixels))
         result[coords] = 0
 
-    # Brightness reduction (faded ink)
-    if rng.random() > 0.3:
-        factor = rng.uniform(0.5, 0.8)
+    # Brightness reduction (STRONGER fading for hard)
+    if rng.random() > (0.2 / scale):
+        factor = rng.uniform(0.3 * scale, 0.8)
         result = np.clip(result * factor + (1 - factor) * 200, 0, 255).astype(np.uint8)
 
-    # Ink bleeding (dilation)
-    if rng.random() > 0.5:
-        ksize = rng.choice([2, 3])
+    # Ink bleeding (dilation) - INCREASED iterations for hard
+    if rng.random() > (0.3 / scale):
+        ksize = rng.choice([2, 3, 4])
+        iterations = max(1, int(rng.integers(1, 3) * scale))
         kernel = np.ones((ksize, ksize), np.uint8)
-        result = cv2.dilate(result, kernel, iterations=1)
+        result = cv2.dilate(result, kernel, iterations=iterations)
 
-    # Partial occlusion (stains)
-    if rng.random() > 0.6:
-        num_rects = rng.integers(1, 4)
+    # Partial occlusion (stains) - MORE frequent and larger for hard
+    if rng.random() > (0.4 / scale):
+        num_rects = max(1, int(rng.integers(1, 4) * scale))
         for _ in range(num_rects):
-            rx, ry = rng.integers(0, w - 10), rng.integers(0, h - 10)
-            rw, rh = rng.integers(5, min(30, w - rx)), rng.integers(5, min(30, h - ry))
-            color = rng.integers(100, 200)
+            rx = rng.integers(0, max(1, w - 10))
+            ry = rng.integers(0, max(1, h - 10))
+            rw = rng.integers(5, min(int(40 * scale), w - rx))
+            rh = rng.integers(5, min(int(40 * scale), h - ry))
+            color = rng.integers(80, 220)
             result[ry:ry + rh, rx:rx + rw] = color
 
     return result

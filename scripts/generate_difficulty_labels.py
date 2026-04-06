@@ -75,40 +75,76 @@ def main():
     target_per_class = 5000
     rng = np.random.default_rng(42)
 
-    # === EASY: Clean NIST SD19 characters ===
-    print("Generating EASY samples from NIST SD19...")
-    easy_images = load_nist_images("data/raw/nist_sd19", max_samples=target_per_class)
-    if not easy_images:
-        print("  No NIST images found, using clean IAM words as easy samples")
-        easy_images = load_iam_images("data/processed/train.csv", max_samples=target_per_class)
-        for i, img in enumerate(easy_images):
-            _, easy_images[i] = cv2.threshold(img, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
+    # === EASY: Clean IAM samples (same domain as medium/hard to avoid domain shift) ===
+    # CRITICAL FIX: Use IAM for easy (not NIST) to avoid domain shift that breaks
+    # classifier learning. Easy/medium/hard are now all IAM with different quality levels.
+    print("Generating EASY samples from clean IAM...")
+    iam_source = load_iam_images("data/processed/train.csv", max_samples=target_per_class * 3)
+    
+    # Filter for cleanest samples (high brightness, broad range: 140+ for easy)
+    easy_images = []
+    for img in iam_source:
+        if np.mean(img) > 140:  # Bright = clean/readable
+            easy_images.append(img)
+            if len(easy_images) >= target_per_class:
+                break
+    
+    # Fallback: if not enough bright samples, use any
+    if len(easy_images) < target_per_class:
+        easy_images.extend(iam_source[len(easy_images):target_per_class])
 
     count = 0
     for i, img in enumerate(tqdm(easy_images[:target_per_class], desc="Easy")):
         cv2.imwrite(str(output_dir / "easy" / f"easy_{i:05d}.png"), img)
         count += 1
-    print(f"  Generated {count} easy samples")
+    print(f"  Generated {count} easy samples (clean IAM: high contrast)")
 
-    # === MEDIUM: Normal IAM handwriting ===
+    # === MEDIUM: Normal IAM handwriting (mid-range quality) ===
     print("Generating MEDIUM samples from IAM...")
-    iam_images = load_iam_images("data/processed/train.csv", max_samples=target_per_class)
+    iam_medium = load_iam_images("data/processed/train.csv", max_samples=target_per_class * 2)
+    
+    # Filter for medium-quality samples (broader range: 80-170 brightness)
+    medium_images = []
+    for img in iam_medium:
+        mean_intensity = np.mean(img)
+        # Medium = broad mid-range brightness
+        if 80 < mean_intensity < 170:  
+            medium_images.append(img)
+            if len(medium_images) >= target_per_class:
+                break
+    
+    if len(medium_images) < target_per_class:
+        # Fallback: use rest without filtering if not enough found
+        medium_images.extend(iam_medium[len(medium_images):target_per_class])
+    
     count = 0
-    for i, img in enumerate(tqdm(iam_images[:target_per_class], desc="Medium")):
+    for i, img in enumerate(tqdm(medium_images[:target_per_class], desc="Medium")):
         cv2.imwrite(str(output_dir / "medium" / f"medium_{i:05d}.png"), img)
         count += 1
-    print(f"  Generated {count} medium samples")
+    print(f"  Generated {count} medium samples (IAM: mid-range contrast)")
 
-    # === HARD: Degraded IAM images ===
+    # === HARD: Degraded IAM images (dark + heavy synthetic degradation) ===
     print("Generating HARD samples from degraded IAM...")
-    # Reuse IAM images with synthetic degradation
-    hard_source = load_iam_images("data/processed/train.csv", max_samples=target_per_class)
+    iam_hard_source = load_iam_images("data/processed/train.csv", max_samples=target_per_class * 2)
+    
+    # Filter for naturally dark/low-contrast samples (pre-degradation, <120 brightness)
+    hard_candidates = []
+    for img in iam_hard_source:
+        if np.mean(img) < 120:  # Dark samples are harder
+            hard_candidates.append(img)
+            if len(hard_candidates) >= target_per_class:
+                break
+    
+    # Fallback: if not enough dark samples, use any
+    if len(hard_candidates) < target_per_class:
+        hard_candidates.extend(iam_hard_source[len(hard_candidates):target_per_class])
+    
     count = 0
-    for i, img in enumerate(tqdm(hard_source[:target_per_class], desc="Hard")):
-        degraded = simulate_degradation(img, rng=rng)
+    for i, img in enumerate(tqdm(hard_candidates[:target_per_class], desc="Hard")):
+        degraded = simulate_degradation(img, rng=rng, intensity="heavy")
         cv2.imwrite(str(output_dir / "hard" / f"hard_{i:05d}.png"), degraded)
         count += 1
-    print(f"  Generated {count} hard samples")
+    print(f"  Generated {count} hard samples (dark IAM + heavy degradation)")
 
     # Summary
     for cls in ["easy", "medium", "hard"]:

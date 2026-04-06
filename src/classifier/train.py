@@ -74,13 +74,22 @@ def train_classifier(
         ),
     ]
 
-    # Train
-    print("Starting training...")
+    # Train (with class weighting to handle medium-class bias)
+    print("Starting training (with class weighting for medium-class emphasis)...")
+    
+    # Class weights to emphasize difficult-to-learn medium class
+    class_weights = {
+        0: 1.0,    # easy: standard weight
+        1: 3.0,    # medium: 3x weight (heavily misclassified)
+        2: 1.2,    # hard: slight emphasis
+    }
+    
     history = model.fit(
         train_ds,
         validation_data=val_ds,
         epochs=epochs,
         callbacks=callbacks,
+        class_weight=class_weights,
     )
 
     # Evaluate on test set

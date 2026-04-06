@@ -1,0 +1,56 @@
+2026-04-05 17:19:59.096744: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+2026-04-05 17:20:00.868254: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+C:\Users\brosi\AppData\Roaming\Python\Python312\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.4.0.post1)/charset_normalizer (3.4.4) doesn't match a supported version!
+  warnings.warn(
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+2026-04-05 17:20:05.529481: I tensorflow/core/platform/cpu_feature_guard.cc:210] This TensorFlow binary is optimized to use available CPU instructions in performance-critical operations.
+To enable the following instructions: AVX2 FMA, in other operations, rebuild TensorFlow with the appropriate compiler flags.
+2026-04-05 17:20:28.130340: W tensorflow/core/framework/local_rendezvous.cc:404] Local rendezvous is aborting with status: OUT_OF_RANGE: End of sequence
+Traceback (most recent call last):
+Loading model from models/classifier/best_model.keras...
+Loading test dataset...
+
+Evaluating on TEST set...
+Test Loss: 1.6959
+Test Accuracy: 0.4990 (49.9%)
+
+Evaluating on VALIDATION set...
+Val Loss: 1.6024
+Val Accuracy: 0.5251 (52.5%)
+
+Computing per-class accuracy...
+
+Confusion Matrix (Test Set):
+True\Pred      easy        medium      hard        
+-------------------------------------------------------
+easy                    471           0           1
+medium                  159           0         360
+hard                    229           0         275
+
+======================================================================
+CLASSIFIER EVALUATION SUMMARY
+======================================================================
+
+Overall Test Accuracy: 49.9%
+Overall Val Accuracy: 52.5%
+
+Per-Class Accuracy (Test Set):
+  easy    :  99.8% ( 472 samples)
+  medium  :   0.0% ( 519 samples)
+  hard    :  54.6% ( 504 samples)
+
+Key Confusion Patterns:
+  File "C:\Users\brosi\Desktop\SEG4180\Project\scripts\evaluate_classifier.py", line 131, in <module>
+    metrics = evaluate_classifier_detailed()
+              ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Users\brosi\Desktop\SEG4180\Project\scripts\evaluate_classifier.py", line 117, in evaluate_classifier_detailed
+    print(f"  {true_class:8s} \u2192 {pred_class:8s}: {pct:5.1f}% ({int(confusion[i, j]):3d}/{int(total):3d})")
+  File "C:\Python312\Lib\encodings\cp1252.py", line 19, in encode
+    return codecs.charmap_encode(input,self.errors,encoding_table)[0]
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+UnicodeEncodeError: 'charmap' codec can't encode character '\u2192' in position 11: character maps to <undefined>

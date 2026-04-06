@@ -160,7 +160,7 @@ async def process_page_image(
     file: UploadFile = File(...),
     profile: str = Query("handwritten"),
     force_engine: str = Query(None, enum=["tesseract", "custom", "trocr"]),
-    segmentation_mode: str = Query("auto", enum=["auto", "projection", "single"]),
+    segmentation_mode: str = Query("auto", enum=["auto", "projection", "single", "curved", "curved-fallback"]),
     output_format: str = Query("json", enum=["json", "text", "tei-xml"]),
 ):
     """Process a full page image by segmenting into lines and running per-line OCR."""

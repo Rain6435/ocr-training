@@ -70,14 +70,16 @@ def segment_lines(image: Any, min_line_height: int = 10) -> list[Any]:
 def segment_lines_with_boxes(
     image: Any,
     min_line_height: int = 10,
+    gap_threshold_factor: float = 0.05,
+    smoothing_sigma: float = 3.0,
 ) -> list[tuple[Any, tuple[int, int, int, int]]]:
     """Segment lines and include per-line bounding boxes as (x1, y1, x2, y2)."""
     binary = _prepare_binary(image)
 
     projection = np.sum(binary, axis=1).astype(np.float64)
-    projection = gaussian_filter1d(projection, sigma=3)
+    projection = gaussian_filter1d(projection, sigma=smoothing_sigma)
 
-    threshold = np.max(projection) * 0.05
+    threshold = np.max(projection) * gap_threshold_factor
     is_gap = projection < threshold
 
     lines_with_boxes = []

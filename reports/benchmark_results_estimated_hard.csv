@@ -1,0 +1,6 @@
+engine,num_samples,mean_cer,mean_wer,mean_time_ms,p95_time_ms,total_cost,mean_cost
+tesseract,200,97.6,101.8,140,167,0.0,0.0
+custom_crnn,200,44.8,42.8,259,536,0.2,0.001
+trocr,200,169.6,107.3,2863,4636,10.0,0.05
+google_vision,200,45.7,53.0,134,176,3.0,0.015
+intelligent_routing,200,65.9,60.4,863,3722,1.71,0.00856

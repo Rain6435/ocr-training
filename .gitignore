@@ -39,3 +39,17 @@ Thumbs.db
 
 # Jupyter
 .ipynb_checkpoints/
+*.ipynb_checkpoints/
+
+# Temporary and debug files
+output.log
+benchmark_*_output.log
+*.zip
+jobs_list.json
+.env.example
+reports_backup_*
+
+# Local test/debug artifacts
+.secrets/
+*.pem
+*.json.example

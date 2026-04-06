@@ -13,6 +13,7 @@ class EngineCostModel:
     custom_crnn_cost: float = 0.001
     trocr_cost: float = 0.05
     paddleocr_cost: float = 0.02
+    google_vision_cost: float = 0.015
     cloud_api_cost: float = 0.10
     classifier_cost: float = 0.0001
     preprocessing_cost: float = 0.0005
@@ -21,6 +22,8 @@ class EngineCostModel:
 class CostAnalyzer:
     def __init__(self, cost_model: EngineCostModel = None):
         self.cost_model = cost_model or EngineCostModel()
+        if self.cost_model.cloud_api_cost <= 0:
+            self.cost_model.cloud_api_cost = self.cost_model.google_vision_cost
 
     def analyze_routing_cost(
         self,

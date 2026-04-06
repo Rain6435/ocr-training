@@ -1,0 +1,22 @@
+ground_truth_char,predicted_char,count
+t,<del>,3
+ ,<del>,3
+i,<del>,2
+p,<del>,2
+n,<del>,2
+6,G,2
+1,I,2
+<ins>, ,2
+1,<del>,1
+h,<del>,1
+s,<del>,1
+a,<del>,1
+o,<del>,1
+m,<del>,1
+e,<del>,1
+.,<del>,1
+',<del>,1
+<ins>,o,1
+<ins>,0,1
+<ins>,/,1
+<ins>,.,1

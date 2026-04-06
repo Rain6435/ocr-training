@@ -20,7 +20,7 @@ class CustomOCREngine:
         img_height: int = 64,
         img_width: int = 256,
         beam_width: int = 10,
-        second_pass_threshold: float = 0.65,
+        second_pass_threshold: float = 0.72,
     ):
         self.img_height = img_height
         self.img_width = img_width
@@ -107,6 +107,19 @@ class CustomOCREngine:
         enhanced = clahe.apply(gray)
         return enhanced
 
+    @staticmethod
+    def _denoise_variant(gray: np.ndarray) -> np.ndarray:
+        """Apply light denoising to reduce compression and sensor noise artifacts."""
+        denoised = cv2.medianBlur(gray, 3)
+        return denoised
+
+    @staticmethod
+    def _sharpen_variant(gray: np.ndarray) -> np.ndarray:
+        """Apply mild sharpening to improve weak stroke boundaries."""
+        kernel = np.array([[0, -1, 0], [-1, 5, -1], [0, -1, 0]], dtype=np.float32)
+        sharpened = cv2.filter2D(gray, -1, kernel)
+        return np.clip(sharpened, 0, 255).astype(np.uint8)
+
     def _prepare_base_image(self, image: np.ndarray) -> np.ndarray:
         """Prepare base grayscale image with normalized polarity and tight crop."""
         if len(image.shape) == 3:
@@ -154,6 +167,41 @@ class CustomOCREngine:
         pool = non_empty if non_empty else candidates
         return max(pool, key=lambda item: item[1])
 
+    @staticmethod
+    def _apply_text_quality_penalty(text: str, confidence: float) -> float:
+        """Penalize confidence for outputs that look like OCR gibberish."""
+        t = text.strip()
+        if not t:
+            return 0.0
+
+        penalty = 0.0
+        chars = list(t)
+        alnum_ratio = sum(ch.isalnum() for ch in chars) / max(len(chars), 1)
+
+        # Too little alphanumeric content often indicates noisy decode.
+        if len(t) >= 10 and alnum_ratio < 0.45:
+            penalty += 0.10
+
+        # Penalize long repeated-character runs.
+        max_run = 1
+        run = 1
+        for i in range(1, len(chars)):
+            if chars[i] == chars[i - 1]:
+                run += 1
+                max_run = max(max_run, run)
+            else:
+                run = 1
+        if max_run >= 4:
+            penalty += 0.12
+
+        # Penalize very low unique-character diversity on long strings.
+        if len(t) >= 12:
+            diversity = len(set(chars)) / len(chars)
+            if diversity < 0.33:
+                penalty += 0.08
+
+        return max(0.0, float(confidence) - penalty)
+
     def recognize(self, image: np.ndarray) -> dict:
         """
         Run OCR on a single image.
@@ -174,15 +222,26 @@ class CustomOCREngine:
         needs_second_pass = (not base_text.strip()) or (base_confidence < self.second_pass_threshold)
         if needs_second_pass:
             enhanced = self._enhance_variant(base)
-            enhanced_tensor = self.preprocess(enhanced)
+            denoised = self._denoise_variant(base)
+            sharpened = self._sharpen_variant(denoised)
+
             enhanced_text, enhanced_confidence = self._decode_prediction(
-                self._predict_logits(enhanced_tensor)
+                self._predict_logits(self.preprocess(enhanced))
+            )
+            sharpened_text, sharpened_confidence = self._decode_prediction(
+                self._predict_logits(self.preprocess(sharpened))
             )
             best_text, best_confidence = self._select_best_candidate(
-                [(base_text, base_confidence), (enhanced_text, enhanced_confidence)]
+                [
+                    (base_text, base_confidence),
+                    (enhanced_text, enhanced_confidence),
+                    (sharpened_text, sharpened_confidence),
+                ]
             )
         else:
             best_text, best_confidence = base_text, base_confidence
+
+        best_confidence = self._apply_text_quality_penalty(best_text, best_confidence)
 
         return {
             "text": best_text,

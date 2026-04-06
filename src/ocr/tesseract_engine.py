@@ -1,6 +1,24 @@
 import numpy as np
 import pytesseract
 import cv2
+import os
+
+# Configure pytesseract to find Tesseract on Windows
+# CRITICAL: Set this FIRST before any pytesseract calls
+tesseract_paths = [
+    r"C:\Program Files\Tesseract-OCR\tesseract.exe",  # Default Windows install
+    r"C:\Program Files (x86)\Tesseract-OCR\tesseract.exe",  # 32-bit install
+]
+
+for path in tesseract_paths:
+    if os.path.exists(path):
+        pytesseract.pytesseract.pytesseract_cmd = path
+        print(f"[TesseractEngine] Configured pytesseract to use: {path}")
+        break
+
+# Also add to PATH environment variable for subprocess calls
+if r"C:\Program Files\Tesseract-OCR" not in os.environ.get("PATH", ""):
+    os.environ["PATH"] = r"C:\Program Files\Tesseract-OCR" + os.pathsep + os.environ.get("PATH", "")
 
 
 class TesseractEngine:

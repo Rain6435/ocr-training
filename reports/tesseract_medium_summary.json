@@ -1,0 +1,14 @@
+{
+  "name": "tesseract",
+  "num_samples": 50,
+  "num_failed": 0,
+  "mean_cer": 0.7783549783549784,
+  "mean_wer": 1.72,
+  "mean_time_ms": 477.2998380661011,
+  "p50_time_ms": 486.33456230163574,
+  "p95_time_ms": 579.4398784637451,
+  "p99_time_ms": 607.4519157409668,
+  "total_cost": 0.0,
+  "mean_cost": 0.0,
+  "error": ""
+}

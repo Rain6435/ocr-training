@@ -1,0 +1,5 @@
+engine,total_rows,failed_rows,failure_rate,mean_cer_success_only,mean_wer_success_only
+custom_crnn,3,0,0.0,0.6666666666666666,0.6666666666666666
+intelligent_routing,3,0,0.0,0.6666666666666666,0.6666666666666666
+tesseract,3,0,0.0,1.0,1.0
+trocr,3,0,0.0,1.6666666666666667,1.0

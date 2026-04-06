@@ -1,0 +1,13 @@
+engine,sample_index,image_path,cer,wer,ground_truth,prediction
+trocr,0,data\raw\nist_sd19\by_class\31\hsf_7\hsf_7_02379.png,3.0,2.0,1,0 1/
+trocr,2,data\raw\nist_sd19\by_class\36\hsf_6\hsf_6_04153.png,2.0,1.0,6,6 .
+tesseract,0,data\raw\nist_sd19\by_class\31\hsf_7\hsf_7_02379.png,1.0,1.0,1,
+tesseract,1,data\raw\iam\lines\g06\g06-093\g06-093-07.png,1.0,1.0,this appointment . ',
+tesseract,2,data\raw\nist_sd19\by_class\36\hsf_6\hsf_6_04153.png,1.0,1.0,6,G
+custom_crnn,0,data\raw\nist_sd19\by_class\31\hsf_7\hsf_7_02379.png,1.0,1.0,1,I
+custom_crnn,2,data\raw\nist_sd19\by_class\36\hsf_6\hsf_6_04153.png,1.0,1.0,6,6o
+intelligent_routing,0,data\raw\nist_sd19\by_class\31\hsf_7\hsf_7_02379.png,1.0,1.0,1,I
+intelligent_routing,2,data\raw\nist_sd19\by_class\36\hsf_6\hsf_6_04153.png,1.0,1.0,6,G
+custom_crnn,1,data\raw\iam\lines\g06\g06-093\g06-093-07.png,0.0,0.0,this appointment . ',this appointment . '
+trocr,1,data\raw\iam\lines\g06\g06-093\g06-093-07.png,0.0,0.0,this appointment . ',this appointment . '
+intelligent_routing,1,data\raw\iam\lines\g06\g06-093\g06-093-07.png,0.0,0.0,this appointment . ',this appointment . '

@@ -5,14 +5,14 @@ routing:
   # Confidence thresholds for difficulty classifier
   easy_threshold: 0.7 # Above this → route to Tesseract
   hard_threshold: 0.6 # Above this → route to TrOCR
-  hard_direct_threshold: 0.8 # Require stronger confidence before direct hard routing
-  hard_margin_over_easy: 0.15 # Hard prob must exceed easy prob by this margin
-  min_width_for_hard: 280 # Prefer medium for short snippets/word crops
+  hard_direct_threshold: 0.74 # Route hard sooner on degraded lines
+  hard_margin_over_easy: 0.10 # Lower margin to avoid overloading medium route
+  min_width_for_hard: 230 # Allow hard routing for narrower difficult snippets
   hard_override_confidence: 0.92 # Allow hard route for very confident hard predictions
   # If neither confident → route to custom model (medium)
 
   # Fallback: if primary engine confidence is low, escalate
-  escalation_threshold: 0.5 # Below this → try next-higher engine
+  escalation_threshold: 0.62 # Escalate earlier when custom confidence is likely unreliable
 
   # Cost optimization
   enable_cost_optimization: true
@@ -27,3 +27,15 @@ cost_model:
   cloud_api: 0.10 # E.g., Google Cloud Vision per page
   classifier_overhead: 0.0001
   preprocessing_overhead: 0.0005
+
+# Page OCR feature toggles (driven via environment variables at runtime)
+# OCR_ENABLE_CURVED_SEGMENTS=true|false
+# OCR_CURVED_OUTLIER_ONLY=true|false
+# OCR_CUSTOM_WORD_MODE=true|false
+# OCR_CUSTOM_WORD_POLICY=always|low_conf|low_conf_or_outlier
+# OCR_CUSTOM_WORD_TRIGGER_CONF=0.66
+# OCR_CUSTOM_WORD_MIN_WORD_WIDTH=8
+# OCR_CUSTOM_WORD_MAX_WORDS=16
+# OCR_REVIEW_QUEUE_ENABLED=true|false
+# OCR_REVIEW_QUEUE_PATH=data/processed/review_queue/page_ocr_queue.jsonl
+# OCR_REVIEW_QUEUE_INCLUDE_ALL=true|false

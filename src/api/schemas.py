@@ -38,6 +38,11 @@ class PageLineResult(BaseModel):
     cost: float
     needs_review: bool
     corrections_applied: int
+    curved_attempted: bool = False
+    curved_used: bool = False
+    word_mode_attempted: bool = False
+    word_mode_used: bool = False
+    word_count: int = 0
 
 
 class PageOCRResult(BaseModel):

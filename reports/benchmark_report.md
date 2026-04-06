@@ -1,64 +1,21 @@
 # Benchmark Report: Multi-Stage Historical Document Digitization Pipeline
 
-## 1. Executive Summary
-- Total documents tested: —
-- Overall pipeline CER: —%
-- Overall pipeline WER: —%
-- Cost savings vs all-cloud: —%
-- Average processing time: —ms/page
+## Per-Engine Accuracy
 
-> Run `make benchmark` to populate this report.
+| Engine | CER % | WER % | Mean Time (ms) | P95 Time (ms) | Total Cost ($) |
+|--------|-------|-------|----------------|---------------|----------------|
+| tesseract | 97.6 | 101.8 | 140 | 167 | 0.0000 |
+| custom_crnn | 44.8 | 42.8 | 259 | 536 | 0.2000 |
+| trocr | 169.6 | 107.3 | 2863 | 4636 | 10.0000 |
+| google_vision | 45.7 | 53.0 | 134 | 176 | 3.0000 |
+| intelligent_routing | 65.9 | 60.4 | 863 | 3722 | 1.7110 |
 
-## 2. Dataset Description
-| Dataset | Test Samples | Type | Avg Image Size |
-|---------|-------------|------|----------------|
-| IAM Lines | ~1,861 | Cursive handwriting lines | ~1200x100 |
-| IAM Words | ~8,799 | Individual handwritten words | ~300x100 |
-| NIST SD19 | — | Isolated handwritten characters | 128x128 |
-| EMNIST | — | Isolated characters (digits+letters) | 28x28 |
+## Engine Availability and Errors
 
-## 3. Per-Engine Accuracy
-
-### 3.1 Character Error Rate (CER %)
-| Engine | IAM Lines | IAM Words | NIST | EMNIST |
-|--------|-----------|-----------|------|--------|
-| Tesseract 5 | | | | |
-| Custom CRNN | | | | |
-| TrOCR-large | | | | |
-| PaddleOCR | | | | |
-
-### 3.2 Word Error Rate (WER %)
-| Engine | IAM Lines | IAM Words | NIST | EMNIST |
-|--------|-----------|-----------|------|--------|
-| Tesseract 5 | | | | |
-| Custom CRNN | | | | |
-| TrOCR-large | | | | |
-| PaddleOCR | | | | |
-
-## 4. Intelligent Routing vs Single-Engine
-
-### 4.1 Accuracy Comparison
-| Approach | CER % | WER % |
-|----------|-------|-------|
-| All Tesseract | | |
-| All Custom CRNN | | |
-| All TrOCR-large | | |
-| **Intelligent Routing** | | |
-
-### 4.2 Cost per 1000 Pages
-| Approach | Compute Cost | Total |
-|----------|-------------|-------|
-| All Tesseract | $0 | $0 |
-| All TrOCR-large | $50 | $50 |
-| All Cloud API | $100 | $100 |
-| **Intelligent Routing** | — | — |
-
-## 5. Latency Analysis
-| Stage | Mean (ms) | P50 (ms) | P95 (ms) |
-|-------|-----------|----------|----------|
-| Preprocessing | | | |
-| Classification | | | |
-| Tesseract OCR | | | |
-| Custom CRNN OCR | | | |
-| TrOCR OCR | | | |
-| Post-processing | | | |
+| Engine/Approach | Samples | Failed | Error |
+|-----------------|---------|--------|-------|
+| tesseract | 200 | 0 |  |
+| custom_crnn | 200 | 0 |  |
+| trocr | 200 | 0 |  |
+| google_vision | 200 | 0 |  |
+| intelligent_routing | 200 | 0 |  |

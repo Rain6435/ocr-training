@@ -1,11 +1,60 @@
 import time
 import logging
+import os
+import json
 from typing import Any
+import numpy as np
 
 from src.preprocessing.segment import segment_columns_with_boxes, segment_lines_with_boxes
+from src.preprocessing.curved_segment import curve_line_crop
+from src.preprocessing.segment import segment_words
 
 
 logger = logging.getLogger(__name__)
+
+
+def _refine_oversized_lines(
+    column_image: Any,
+    lines: list[tuple[Any, tuple[int, int, int, int]]],
+) -> list[tuple[Any, tuple[int, int, int, int]]]:
+    """Split likely merged lines using a stricter projection pass."""
+    if not lines:
+        return lines
+
+    heights = [int(img.shape[0]) for img, _ in lines if img is not None and img.size > 0]
+    if not heights:
+        return lines
+
+    median_h = float(np.median(heights))
+    if median_h <= 0:
+        return lines
+
+    refined: list[tuple[Any, tuple[int, int, int, int]]] = []
+    split_threshold = max(80.0, 2.0 * median_h)
+
+    for line_img, line_box in lines:
+        line_h = int(line_img.shape[0])
+        if line_h < split_threshold:
+            refined.append((line_img, line_box))
+            continue
+
+        sub_lines = segment_lines_with_boxes(
+            line_img,
+            min_line_height=8,
+            gap_threshold_factor=0.12,
+            smoothing_sigma=1.5,
+        )
+
+        if len(sub_lines) <= 1:
+            refined.append((line_img, line_box))
+            continue
+
+        lx1, ly1, _lx2, _ly2 = line_box
+        for sub_img, sub_box in sub_lines:
+            sx1, sy1, sx2, sy2 = sub_box
+            refined.append((sub_img, (int(lx1 + sx1), int(ly1 + sy1), int(lx1 + sx2), int(ly1 + sy2))))
+
+    return refined
 
 
 def _run_ocr_line(
@@ -31,6 +80,72 @@ def _run_ocr_line(
     return ocr_router.route(line_image)
 
 
+def _recognize_custom_by_words(
+    line_image: Any,
+    ocr_router: Any,
+    min_word_width: int = 8,
+    max_words: int = 16,
+) -> dict[str, Any] | None:
+    """Run custom OCR on segmented words and stitch output left-to-right."""
+    words = segment_words(line_image)
+    if not words:
+        return None
+
+    # If segmentation did not split anything, skip word path.
+    if len(words) <= 1:
+        return None
+
+    if len(words) > max_words:
+        words = words[:max_words]
+
+    engine = ocr_router.engines.get("medium")
+    if engine is None:
+        return None
+
+    parts: list[str] = []
+    confidences: list[float] = []
+    total_cost = 0.0
+
+    for word_img in words:
+        if word_img is None or word_img.size == 0:
+            continue
+        if int(word_img.shape[1]) < min_word_width:
+            continue
+
+        result = engine.recognize(word_img)
+        text = str(result.get("text", "")).strip()
+        if text:
+            parts.append(text)
+        confidences.append(float(result.get("confidence", 0.0)))
+        total_cost += float(result.get("cost", 0.0))
+
+    if not parts:
+        return None
+
+    stitched_text = " ".join(parts)
+    stitched_conf = float(np.mean(confidences)) if confidences else 0.0
+
+    return {
+        "text": stitched_text,
+        "confidence": stitched_conf,
+        "engine_used": "medium",
+        "difficulty": "medium",
+        "processing_time_ms": 0.0,
+        "cost": total_cost,
+        "escalated": False,
+        "word_count": len(parts),
+    }
+
+
+def _append_review_queue_record(queue_path: str, record: dict[str, Any]) -> None:
+    """Append one JSONL review record for active-learning triage."""
+    parent = os.path.dirname(queue_path)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    with open(queue_path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(record, ensure_ascii=True) + "\n")
+
+
 def process_page(
     image: Any,
     preprocessing_pipeline: Any,
@@ -47,7 +162,7 @@ def process_page(
     preprocessed = preprocessing_pipeline.process(image, profile=profile)
     processed_full = preprocessed["preprocessed_full"]
 
-    if segmentation_mode not in {"auto", "projection", "single"}:
+    if segmentation_mode not in {"auto", "projection", "single", "curved", "curved-fallback"}:
         raise ValueError(f"Unsupported segmentation mode: {segmentation_mode}")
 
     if segmentation_mode == "single":
@@ -63,6 +178,7 @@ def process_page(
         col_lines = segment_lines_with_boxes(col_img)
         if not col_lines:
             col_lines = [(col_img, (0, 0, int(col_img.shape[1]), int(col_img.shape[0])))]
+        col_lines = _refine_oversized_lines(col_img, col_lines)
         for line_img, line_box in col_lines:
             lx1, ly1, lx2, ly2 = line_box
             lines_with_boxes.append(
@@ -76,14 +192,96 @@ def process_page(
     # Reading order: left-to-right columns, then top-to-bottom lines in each column.
     lines_with_boxes.sort(key=lambda item: (item[1][0], item[1][1]))
 
+    line_heights = [int(item[0].shape[0]) for item in lines_with_boxes if item[0] is not None and item[0].size > 0]
+    median_line_height = float(np.median(line_heights)) if line_heights else 0.0
+    outlier_height_threshold = max(80.0, 1.8 * median_line_height) if median_line_height > 0 else 80.0
+
+    curved_enabled_env = os.getenv("OCR_ENABLE_CURVED_SEGMENTS", "false").lower() in {"1", "true", "yes", "on"}
+    explicit_curved_all = segmentation_mode == "curved"
+    explicit_curved_outlier = segmentation_mode == "curved-fallback"
+    use_curved_mode = explicit_curved_all or explicit_curved_outlier or curved_enabled_env
+    if explicit_curved_all:
+        outlier_only = False
+    elif explicit_curved_outlier:
+        outlier_only = True
+    else:
+        outlier_only = os.getenv("OCR_CURVED_OUTLIER_ONLY", "true").lower() in {"1", "true", "yes", "on"}
+
+    custom_word_mode = os.getenv("OCR_CUSTOM_WORD_MODE", "true").lower() in {"1", "true", "yes", "on"}
+    custom_word_policy = os.getenv("OCR_CUSTOM_WORD_POLICY", "low_conf_or_outlier").lower()
+    custom_word_trigger_conf = float(os.getenv("OCR_CUSTOM_WORD_TRIGGER_CONF", "0.66"))
+    custom_word_min_width = int(os.getenv("OCR_CUSTOM_WORD_MIN_WORD_WIDTH", "8"))
+    custom_word_max_words = int(os.getenv("OCR_CUSTOM_WORD_MAX_WORDS", "16"))
+
+    review_queue_enabled = os.getenv("OCR_REVIEW_QUEUE_ENABLED", "false").lower() in {"1", "true", "yes", "on"}
+    review_queue_path = os.getenv("OCR_REVIEW_QUEUE_PATH", "data/processed/review_queue/page_ocr_queue.jsonl")
+    review_queue_include_all = os.getenv("OCR_REVIEW_QUEUE_INCLUDE_ALL", "false").lower() in {"1", "true", "yes", "on"}
+
     line_results: list[dict[str, Any]] = []
     total_cost = 0.0
     confidence_values: list[float] = []
     needs_review = False
 
     for idx, (line_img, bbox, column_index) in enumerate(lines_with_boxes):
-        normalized = preprocessing_pipeline.normalize_for_ocr(line_img)
+        line_h = int(line_img.shape[0])
+        should_try_curved = use_curved_mode and ((not outlier_only) or (line_h >= outlier_height_threshold))
+
+        curved_used = False
+        line_for_ocr = line_img
+        if should_try_curved:
+            line_for_ocr, curved_used = curve_line_crop(line_img)
+
+        normalized = preprocessing_pipeline.normalize_for_ocr(line_for_ocr)
         routed = _run_ocr_line(normalized, force_engine, ocr_router)
+
+        word_mode_attempted = False
+        word_mode_used = False
+        word_count = 0
+        if custom_word_mode and str(routed.get("engine_used", "")) == "medium":
+            should_try_word_mode = False
+            if custom_word_policy == "always":
+                should_try_word_mode = True
+            elif custom_word_policy == "low_conf":
+                should_try_word_mode = float(routed.get("confidence", 0.0)) < custom_word_trigger_conf
+            else:
+                # Default: low confidence or segmentation outlier line.
+                should_try_word_mode = (
+                    float(routed.get("confidence", 0.0)) < custom_word_trigger_conf
+                    or line_h >= outlier_height_threshold
+                )
+
+            if should_try_word_mode:
+                word_mode_attempted = True
+                word_result = _recognize_custom_by_words(
+                    line_for_ocr,
+                    ocr_router,
+                    min_word_width=custom_word_min_width,
+                    max_words=custom_word_max_words,
+                )
+            else:
+                word_result = None
+
+            if word_result is not None:
+                # Prefer word-level custom when it yields non-empty output and better confidence.
+                if (
+                    word_result["text"].strip()
+                    and float(word_result["confidence"]) >= float(routed.get("confidence", 0.0))
+                ):
+                    routed = {
+                        **routed,
+                        "text": word_result["text"],
+                        "confidence": float(word_result["confidence"]),
+                        "cost": float(word_result["cost"]),
+                    }
+                    word_mode_used = True
+                    word_count = int(word_result.get("word_count", 0))
+                    logger.info(
+                        "Page line %d custom word-mode applied words_text_len=%d words=%d conf=%.3f",
+                        idx,
+                        len(word_result["text"]),
+                        int(word_result.get("word_count", 0)),
+                        float(word_result["confidence"]),
+                    )
 
         if force_engine is None:
             logger.info(
@@ -110,6 +308,16 @@ def process_page(
                 int(bbox[1]),
                 int(bbox[2]),
                 int(bbox[3]),
+            )
+
+        if should_try_curved:
+            logger.info(
+                "Page line %d curved_extraction attempted=%s used=%s line_h=%d threshold=%.1f",
+                idx,
+                True,
+                bool(curved_used),
+                int(line_h),
+                float(outlier_height_threshold),
             )
 
         correction = spell_corrector.correct(routed.get("text", ""))
@@ -144,8 +352,44 @@ def process_page(
                 "cost": float(routed.get("cost", 0.0)),
                 "needs_review": bool(confidence_result.get("needs_review", False)),
                 "corrections_applied": int(correction.get("num_corrections", 0)),
+                "curved_attempted": bool(should_try_curved),
+                "curved_used": bool(curved_used),
+                "word_mode_attempted": bool(word_mode_attempted),
+                "word_mode_used": bool(word_mode_used),
+                "word_count": int(word_count),
             }
         )
+
+        should_enqueue = bool(confidence_result.get("needs_review", False)) or review_queue_include_all
+        if review_queue_enabled and should_enqueue:
+            review_priority = max(
+                0.0,
+                1.0 - float(line_confidence),
+            ) + (0.15 if bool(routed.get("escalated", False)) else 0.0)
+            _append_review_queue_record(
+                review_queue_path,
+                {
+                    "ts": time.time(),
+                    "profile": profile or "default",
+                    "segmentation_mode": segmentation_mode,
+                    "line_index": int(idx),
+                    "column_index": int(column_index),
+                    "bbox": {
+                        "x1": int(bbox[0]),
+                        "y1": int(bbox[1]),
+                        "x2": int(bbox[2]),
+                        "y2": int(bbox[3]),
+                    },
+                    "text": str(correction.get("corrected", "")),
+                    "confidence": float(line_confidence),
+                    "engine_used": str(routed.get("engine_used", routed.get("engine", "unknown"))),
+                    "difficulty": str(routed.get("difficulty", "medium")),
+                    "escalated": bool(routed.get("escalated", False)),
+                    "curved_used": bool(curved_used),
+                    "word_mode_used": bool(word_mode_used),
+                    "review_priority": float(review_priority),
+                },
+            )
 
     elapsed_ms = (time.time() - start_time) * 1000
     page_text = "\n".join(line["text"] for line in line_results)

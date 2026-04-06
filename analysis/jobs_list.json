@@ -1,0 +1,137 @@
+[
+    {
+        "createTime": "2026-03-29T16:59:47.547579Z",
+        "displayName": "classifier-training-run1-custom-job",
+        "endTime": "2026-03-29T17:12:19Z",
+        "error": {
+            "code": 3,
+            "message": "The replica workerpool0-0 exited with a non-zero status of 128. Termination reason: StartError. \n Termination log message: failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"--gcs-bucket\": executable file not found in $PATH\nTo find out more about why your job exited please check the logs: https://console.cloud.google.com/logs/viewer?project=536990699426&resource=ml_job%2Fjob_id%2F7535570681187008512&advancedFilter=resource.type%3D%22ml_job%22%0Aresource.labels.job_id%3D%227535570681187008512%22"
+        },
+        "jobSpec": {
+            "baseOutputDirectory": {
+                "outputUriPrefix": "gs://ocr-data-89625/aiplatform-custom-training-2026-03-29-12:57:37.613"
+            },
+            "workerPoolSpecs": [
+                {
+                    "containerSpec": {
+                        "args": [
+                            "--gcs-bucket",
+                            "ocr-data-89625",
+                            "--gcs-data-prefix",
+                            "data/difficulty_labels",
+                            "--gcs-model-prefix",
+                            "models/classifier",
+                            "--epochs",
+                            "30",
+                            "--batch-size",
+                            "64"
+                        ],
+                        "imageUri": "us-central1-docker.pkg.dev/ocr-training-491603/vertex-ai/ocr-classifier-training:latest"
+                    },
+                    "diskSpec": {
+                        "bootDiskSizeGb": 100,
+                        "bootDiskType": "pd-ssd"
+                    },
+                    "machineSpec": {
+                        "machineType": "n1-standard-4"
+                    },
+                    "replicaCount": "1"
+                }
+            ]
+        },
+        "name": "projects/536990699426/locations/us-central1/customJobs/7535570681187008512",
+        "startTime": "2026-03-29T17:12:19Z",
+        "state": "JOB_STATE_FAILED",
+        "updateTime": "2026-03-29T17:12:32.682747Z"
+    },
+    {
+        "createTime": "2026-03-29T16:59:52.955411Z",
+        "displayName": "classifier-training-run2-custom-job",
+        "endTime": "2026-03-29T17:11:44Z",
+        "error": {
+            "code": 3,
+            "message": "The replica workerpool0-0 exited with a non-zero status of 128. Termination reason: StartError. \n Termination log message: failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"--gcs-bucket\": executable file not found in $PATH\nTo find out more about why your job exited please check the logs: https://console.cloud.google.com/logs/viewer?project=536990699426&resource=ml_job%2Fjob_id%2F4769938297516457984&advancedFilter=resource.type%3D%22ml_job%22%0Aresource.labels.job_id%3D%224769938297516457984%22"
+        },
+        "jobSpec": {
+            "baseOutputDirectory": {
+                "outputUriPrefix": "gs://ocr-data-89625/aiplatform-custom-training-2026-03-29-12:58:36.818"
+            },
+            "workerPoolSpecs": [
+                {
+                    "containerSpec": {
+                        "args": [
+                            "--gcs-bucket",
+                            "ocr-data-89625",
+                            "--gcs-data-prefix",
+                            "data/difficulty_labels",
+                            "--gcs-model-prefix",
+                            "models/classifier",
+                            "--epochs",
+                            "30",
+                            "--batch-size",
+                            "64"
+                        ],
+                        "imageUri": "us-central1-docker.pkg.dev/ocr-training-491603/vertex-ai/ocr-classifier-training:latest"
+                    },
+                    "diskSpec": {
+                        "bootDiskSizeGb": 100,
+                        "bootDiskType": "pd-ssd"
+                    },
+                    "machineSpec": {
+                        "machineType": "n1-standard-4"
+                    },
+                    "replicaCount": "1"
+                }
+            ]
+        },
+        "name": "projects/536990699426/locations/us-central1/customJobs/4769938297516457984",
+        "startTime": "2026-03-29T17:11:44Z",
+        "state": "JOB_STATE_FAILED",
+        "updateTime": "2026-03-29T17:12:27.247592Z"
+    },
+    {
+        "createTime": "2026-03-29T16:59:55.081097Z",
+        "displayName": "classifier-training-run1-custom-job",
+        "endTime": "2026-03-29T17:11:36Z",
+        "error": {
+            "code": 3,
+            "message": "The replica workerpool0-0 exited with a non-zero status of 128. Termination reason: StartError. \n Termination log message: failed to create containerd task: failed to create shim task: OCI runtime create failed: runc create failed: unable to start container process: error during container init: exec: \"--gcs-bucket\": executable file not found in $PATH\nTo find out more about why your job exited please check the logs: https://console.cloud.google.com/logs/viewer?project=536990699426&resource=ml_job%2Fjob_id%2F6421136481598832640&advancedFilter=resource.type%3D%22ml_job%22%0Aresource.labels.job_id%3D%226421136481598832640%22"
+        },
+        "jobSpec": {
+            "baseOutputDirectory": {
+                "outputUriPrefix": "gs://ocr-data-89625/aiplatform-custom-training-2026-03-29-12:55:40.925"
+            },
+            "workerPoolSpecs": [
+                {
+                    "containerSpec": {
+                        "args": [
+                            "--gcs-bucket",
+                            "ocr-data-89625",
+                            "--gcs-data-prefix",
+                            "data/difficulty_labels",
+                            "--gcs-model-prefix",
+                            "models/classifier",
+                            "--epochs",
+                            "30",
+                            "--batch-size",
+                            "64"
+                        ],
+                        "imageUri": "us-central1-docker.pkg.dev/ocr-training-491603/vertex-ai/ocr-classifier-training:latest"
+                    },
+                    "diskSpec": {
+                        "bootDiskSizeGb": 100,
+                        "bootDiskType": "pd-ssd"
+                    },
+                    "machineSpec": {
+                        "machineType": "n1-standard-4"
+                    },
+                    "replicaCount": "1"
+                }
+            ]
+        },
+        "name": "projects/536990699426/locations/us-central1/customJobs/6421136481598832640",
+        "startTime": "2026-03-29T17:11:36Z",
+        "state": "JOB_STATE_FAILED",
+        "updateTime": "2026-03-29T17:11:38.847504Z"
+    }
+]

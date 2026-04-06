@@ -1,0 +1,128 @@
+2026-04-05 20:07:55.539297: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+2026-04-05 20:08:01.297997: I tensorflow/core/util/port.cc:113] oneDNN custom operations are on. You may see slightly different numerical results due to floating-point round-off errors from different computation orders. To turn them off, set the environment variable `TF_ENABLE_ONEDNN_OPTS=0`.
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+C:\Users\brosi\AppData\Roaming\Python\Python312\site-packages\requests\__init__.py:113: RequestsDependencyWarning: urllib3 (2.6.3) or chardet (7.4.0.post1)/charset_normalizer (3.4.4) doesn't match a supported version!
+  warnings.warn(
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+AttributeError: 'MessageFactory' object has no attribute 'GetPrototype'
+
+Generating EASY samples from clean IAM...
+Easy:   0%|          | 0/5000 [00:00<?, ?it/s]
+Easy:   1%|1         | 53/5000 [00:00<00:09, 519.69it/s]
+Easy:   2%|2         | 105/5000 [00:00<00:10, 469.32it/s]
+Easy:   3%|3         | 153/5000 [00:00<00:12, 394.89it/s]
+Easy:   4%|4         | 217/5000 [00:00<00:10, 471.68it/s]
+Easy:   5%|5         | 266/5000 [00:00<00:10, 450.03it/s]
+Easy:   6%|6         | 313/5000 [00:00<00:10, 445.17it/s]
+Easy:   7%|7         | 359/5000 [00:00<00:10, 438.46it/s]
+Easy:   8%|8         | 416/5000 [00:00<00:09, 473.54it/s]
+Easy:   9%|9         | 464/5000 [00:01<00:10, 433.03it/s]
+Easy:  10%|#         | 510/5000 [00:01<00:10, 438.23it/s]
+Easy:  11%|#1        | 555/5000 [00:01<00:10, 436.17it/s]
+Easy:  12%|#2        | 600/5000 [00:01<00:10, 434.81it/s]
+Easy:  13%|#2        | 645/5000 [00:01<00:10, 433.62it/s]
+Easy:  14%|#3        | 689/5000 [00:01<00:10, 426.47it/s]
+Easy:  15%|#4        | 734/5000 [00:01<00:09, 433.17it/s]
+Easy:  16%|#5        | 792/5000 [00:01<00:08, 469.96it/s]
+Easy:  17%|#6        | 840/5000 [00:01<00:09, 454.93it/s]
+Easy:  18%|#7        | 886/5000 [00:01<00:09, 441.00it/s]
+Easy:  19%|#8        | 931/5000 [00:02<00:09, 437.50it/s]
+Easy:  20%|#9        | 993/5000 [00:02<00:08, 488.87it/s]
+Easy:  21%|##        | 1043/5000 [00:02<00:08, 445.75it/s]
+Easy:  22%|##1       | 1089/5000 [00:02<00:09, 422.94it/s]
+Easy:  23%|##2       | 1133/5000 [00:02<00:09, 416.60it/s]
+Easy:  24%|##3       | 1197/5000 [00:02<00:08, 473.92it/s]
+Easy:  25%|##4       | 1246/5000 [00:02<00:08, 439.05it/s]
+Easy:  26%|##5       | 1291/5000 [00:02<00:09, 397.56it/s]
+Easy:  27%|##7       | 1360/5000 [00:03<00:07, 472.04it/s]
+Easy:  28%|##8       | 1410/5000 [00:03<00:07, 476.25it/s]
+Easy:  29%|##9       | 1460/5000 [00:03<00:08, 412.90it/s]
+Easy:  30%|###       | 1505/5000 [00:03<00:08, 420.68it/s]
+Easy:  32%|###1      | 1584/5000 [00:03<00:06, 517.16it/s]
+Easy:  33%|###2      | 1639/5000 [00:03<00:07, 421.97it/s]
+Easy:  34%|###3      | 1686/5000 [00:03<00:07, 422.68it/s]
+Easy:  35%|###5      | 1755/5000 [00:03<00:06, 487.93it/s]
+Easy:  36%|###6      | 1808/5000 [00:04<00:06, 465.49it/s]
+Easy:  37%|###7      | 1858/5000 [00:04<00:07, 401.51it/s]
+Easy:  38%|###8      | 1902/5000 [00:04<00:07, 410.22it/s]
+Easy:  39%|###9      | 1970/5000 [00:04<00:06, 477.80it/s]
+Easy:  40%|####      | 2021/5000 [00:04<00:06, 453.83it/s]
+Easy:  41%|####1     | 2069/5000 [00:04<00:06, 420.88it/s]
+Easy:  43%|####2     | 2137/5000 [00:04<00:05, 486.50it/s]
+Easy:  44%|####3     | 2189/5000 [00:04<00:05, 487.63it/s]
+Easy:  45%|####4     | 2240/5000 [00:05<00:06, 412.58it/s]
+Easy:  46%|####5     | 2290/5000 [00:05<00:06, 433.32it/s]
+Easy:  47%|####7     | 2361/5000 [00:05<00:05, 503.07it/s]
+Easy:  48%|####8     | 2415/5000 [00:05<00:05, 468.63it/s]
+Easy:  49%|####9     | 2465/5000 [00:05<00:05, 446.60it/s]
+Easy:  50%|#####     | 2517/5000 [00:05<00:05, 464.56it/s]
+Easy:  51%|#####1    | 2574/5000 [00:05<00:04, 492.33it/s]
+Easy:  52%|#####2    | 2625/5000 [00:05<00:05, 463.29it/s]
+Easy:  53%|#####3    | 2673/5000 [00:05<00:05, 420.95it/s]
+Easy:  54%|#####4    | 2717/5000 [00:06<00:05, 422.90it/s]
+Easy:  55%|#####5    | 2773/5000 [00:06<00:04, 455.88it/s]
+Easy:  56%|#####6    | 2820/5000 [00:06<00:04, 450.09it/s]
+Easy:  57%|#####7    | 2866/5000 [00:06<00:04, 442.78it/s]
+Easy:  58%|#####8    | 2911/5000 [00:06<00:04, 444.00it/s]
+Easy:  60%|#####9    | 2976/5000 [00:06<00:04, 498.06it/s]
+Easy:  61%|######    | 3027/5000 [00:06<00:04, 481.76it/s]
+Easy:  62%|######1   | 3076/5000 [00:06<00:04, 434.40it/s]
+Easy:  63%|######2   | 3128/5000 [00:06<00:04, 456.16it/s]
+Easy:  64%|######3   | 3186/5000 [00:07<00:03, 489.90it/s]
+Easy:  65%|######4   | 3236/5000 [00:07<00:03, 453.54it/s]
+Easy:  66%|######5   | 3283/5000 [00:07<00:04, 421.10it/s]
+Easy:  67%|######6   | 3343/5000 [00:07<00:03, 467.72it/s]
+Easy:  68%|######8   | 3404/5000 [00:07<00:03, 499.19it/s]
+Easy:  69%|######9   | 3456/5000 [00:07<00:03, 410.64it/s]
+Easy:  70%|#######   | 3501/5000 [00:07<00:03, 416.80it/s]
+Easy:  72%|#######1  | 3576/5000 [00:07<00:02, 501.16it/s]
+Easy:  73%|#######2  | 3630/5000 [00:08<00:03, 429.13it/s]
+Easy:  74%|#######3  | 3677/5000 [00:08<00:03, 420.24it/s]
+Easy:  75%|#######4  | 3745/5000 [00:08<00:02, 483.90it/s]
+Easy:  76%|#######5  | 3797/5000 [00:08<00:02, 470.70it/s]
+Easy:  77%|#######6  | 3847/5000 [00:08<00:02, 407.43it/s]
+Easy:  78%|#######7  | 3898/5000 [00:08<00:02, 431.15it/s]
+Easy:  79%|#######9  | 3971/5000 [00:08<00:02, 507.17it/s]
+Easy:  80%|########  | 4025/5000 [00:08<00:02, 445.53it/s]
+Easy:  81%|########1 | 4073/5000 [00:09<00:02, 412.68it/s]
+Easy:  83%|########2 | 4137/5000 [00:09<00:01, 467.07it/s]
+Easy:  84%|########3 | 4187/5000 [00:09<00:01, 463.54it/s]
+Easy:  85%|########4 | 4236/5000 [00:09<00:01, 391.22it/s]
+Easy:  86%|########5 | 4279/5000 [00:09<00:01, 386.12it/s]
+Easy:  87%|########6 | 4349/5000 [00:09<00:01, 463.68it/s]
+Easy:  88%|########7 | 4399/5000 [00:09<00:01, 450.47it/s]
+Easy:  89%|########8 | 4447/5000 [00:09<00:01, 387.39it/s]
+Easy:  90%|########9 | 4497/5000 [00:10<00:01, 414.07it/s]
+Easy:  91%|#########1| 4566/5000 [00:10<00:00, 483.04it/s]
+Easy:  92%|#########2| 4618/5000 [00:10<00:00, 412.66it/s]
+Easy:  93%|#########3| 4663/5000 [00:10<00:00, 411.09it/s]
+Easy:  95%|#########4| 4735/5000 [00:10<00:00, 488.58it/s]
+Easy:  96%|#########5| 4788/5000 [00:10<00:00, 470.04it/s]
+Easy:  97%|#########6| 4838/5000 [00:10<00:00, 411.65it/s]
+Easy:  98%|#########7| 4893/5000 [00:10<00:00, 444.74it/s]
+Easy:  99%|#########8| 4947/5000 [00:11<00:00, 468.12it/s]
+Easy: 100%|#########9| 4996/5000 [00:11<00:00, 431.42it/s]
+Easy: 100%|##########| 5000/5000 [00:11<00:00, 445.28it/s]
+
+  Generated 5000 easy samples (clean IAM: high contrast)
+Generating MEDIUM samples from IAM...
+Medium:   0%|          | 0/140 [00:00<?, ?it/s]
+Medium:  26%|##6       | 37/140 [00:00<00:00, 364.27it/s]
+Medium:  53%|#####2    | 74/140 [00:00<00:00, 293.39it/s]
+Medium:  79%|#######8  | 110/140 [00:00<00:00, 318.65it/s]
+Medium: 100%|##########| 140/140 [00:00<00:00, 338.97it/s]
+  Generated 140 medium samples (IAM: mid-range contrast)
+Generating HARD samples from degraded IAM...
+
+Hard:   0%|          | 0/10 [00:00<?, ?it/s]
+Hard: 100%|##########| 10/10 [00:00<00:00, 98.84it/s]
+Hard: 100%|##########| 10/10 [00:00<00:00, 97.86it/s]
+  Generated 10 hard samples (dark IAM + heavy degradation)
+  easy: 5000 images
+  medium: 5000 images
+  hard: 5000 images
+
+Done! Labels saved to data/difficulty_labels/
