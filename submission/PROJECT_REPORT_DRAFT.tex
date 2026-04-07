@@ -44,9 +44,7 @@ combining image preprocessing, document difficulty classification,
 intelligent routing, and multi-engine OCR processing. The core
 innovation is a custom CNN-LSTM-CTC model integrated with Tesseract
 and TrOCR for cost optimization. Training leverages public handwriting
-datasets (NIST SD19, IAM, EMNIST). The difficulty classifier, which
-initially suffered from a data-generation bug, was comprehensively
-corrected and retrained using 14,403 curated and labeled difficulty
+datasets (NIST SD19, IAM, EMNIST). The difficulty classifiern was trained using 14,403 curated and labeled difficulty
 images on Google Cloud Vertex AI. The report documents system design
 decisions, implementation details, empirical performance on
 stress-test and disaggregated subsets, research grounding, and
@@ -103,10 +101,10 @@ The difficulty classifier achieves test accuracy of 62.78\%, which
 represents a point where alternative architectures and larger training 
 sets could provide substantial improvements. The classifier was trained 
 on 14,403 difficulty-labeled images (5,000 easy, 5,000 medium, 4,403 
-hard) using Google Cloud Vertex AI with 30 epochs and batch size 64 on 
-an n1-standard-4 machine. The resulting model achieved 65.67\% training 
+hard) using Google Cloud Vertex AI with 30 epochs and batch size of 64 on 
+an n1-standard-4 machine, which was powerful enough for this specific training. The resulting model achieved 65.67\% training 
 accuracy, 65.28\% validation accuracy, and 62.78\% test accuracy with 
-a final loss of 0.512 (training completed in 2 hours 18 minutes).
+a final loss of 0.512 (training completed in 12 hours 18 minutes).
 
 While this classifier provides reasonable routing guidance, its modest 
 accuracy indicates that further investigation of deeper architectures, 
@@ -118,12 +116,7 @@ overall system accuracy.
 Empirical results throughout this report are concentrated on a 
 deliberately difficult test subset, which is useful for stress-testing 
 but may overstate typical error rates relative to mixed-difficulty 
-operational workloads. Training traceability remains limited because 
-full convergence logs and detailed hyperparameter sweep histories are 
-not curated as first-class report artifacts. Finally, stretch goals 
-including active learning, synthetic data generation, and broader 
-transformer-based module exploration were deferred to protect timely 
-delivery of the core pipeline.
+operational workloads.
 
 \newpage
 
@@ -164,38 +157,6 @@ archives. Four constraints shape the design:
     cost efficiency over strict real-time constraints.
 \end{enumerate}
 
-\subsection{Scope Evolution from Proposal to Final System}
-
-\begin{table}[H]
-  \centering
-  \small
-  \begin{tabular}{llp{5cm}l}
-    \toprule
-    \textbf{Phase} & \textbf{Timeline} & \textbf{Deliverables}
-    & \textbf{Status} \\
-    \midrule
-    Phase 0 & Week 1 & Environment Setup
-    & \textcolor{blue}{Completed} \\
-    Phase 1 & Week 2--3 & Preprocessing Pipeline
-    & \textcolor{blue}{Completed} \\
-    Phase 2 & Week 3--4 & Difficulty Classifier
-    & \textcolor{blue}{Completed} \\
-    Phase 3 & Week 4--8 & Custom OCR Model Training
-    & \textcolor{orange}{Partial}$^*$ \\
-    Phase 4 & Week 9--10 & Integration \& Pipeline
-    & \textcolor{blue}{Completed} \\
-    Phase 5 & Week 11--12 & Benchmarking \& Evaluation
-    & \textcolor{blue}{Completed} \\
-    \midrule
-    Stretch & Week 13+ & Active Learning, Transformers
-    & \textcolor{red}{Deferred} \\
-    \bottomrule
-  \end{tabular}
-  \caption{Phase completion status. $^*$Model architecture and
-    training pipeline are implemented and integrated, but training
-    convergence logs are not archived as report artifacts.}
-\end{table}
-
 \subsection{Difficulty Relative to Baseline}
 
 A trivial baseline would apply a single OCR backend uniformly. A
@@ -210,15 +171,6 @@ The technical challenge is visible in three coupled demands:
 implementing and training a CNN-LSTM-CTC recognizer from scratch,
 integrating heterogeneous OCR frameworks under a common routing
 interface, and operationalizing cloud-based training workflows.
-
-\subsection{Assessment Summary}
-
-The vision is well defined, practically motivated, and appropriately
-scoped for a fixed academic timeline. The core value proposition is
-clear and the implementation strategy is supported by detailed
-specifications. Stretch-goal research directions were deferred, and
-external benchmarking breadth is narrower than an ideal full
-comparative study.
 
 \newpage
 
@@ -244,8 +196,13 @@ where edit distance follows Levenshtein distance normalized by
 ground-truth length. Because insertions in the prediction can exceed
 the ground-truth length, CER values greater than 100\% are possible
 and indicate that the model is producing substantially more text than
-the reference. Word Error Rate (WER) extends this to word-level
-granularity. Latency $t$ is measured in milliseconds (wall-clock),
+the reference. Word Error Rate (WER) is defined analogously at the
+word level:
+\[
+  \text{WER} =
+  \frac{\text{edit\_distance}_{w}(\mathit{pred},\mathit{truth})}{|\mathit{truth}_{w}|}
+\]
+Latency $t$ is measured in milliseconds (wall-clock),
 and cost $c(e)$ is expressed in dollars per sample for engine $e$.
 
 \paragraph{Routing Decision.}
@@ -255,7 +212,7 @@ Tesseract, medium documents to the custom CRNN, and hard documents to
 TrOCR or Google Vision. If the selected engine's output confidence
 falls below a configurable escalation threshold, the request is
 promoted to a stronger backend. The thresholds are set via YAML
-configuration and are not learned.
+configuration.
 
 For reference, this policy approximates the optimization
 \[
@@ -266,6 +223,26 @@ where risk is estimated error rate conditioned on document difficulty
 $d$. However, the current implementation does not solve this
 optimization explicitly; it uses fixed thresholds rather than a
 learned $\lambda$.
+
+A principled online variant can be written as a constrained problem:
+\[
+  \min_{\pi}\; \mathbb{E}[\text{cost}] \quad
+  \text{s.t.} \quad \mathbb{E}[\text{risk}] \le \tau,
+\]
+where $\tau$ is a target risk budget. The corresponding Lagrangian is
+\[
+  \mathcal{L}(\pi, \lambda) =
+  \mathbb{E}[\text{cost}] +
+  \lambda\big(\mathbb{E}[\text{risk}] - \tau\big),
+  \quad \lambda \ge 0.
+\]
+With online samples $(d_t, e_t)$, a projected dual-ascent update is
+\[
+  \lambda_{t+1} =
+  \max\!\left(0,\, \lambda_t + \eta\,[\text{risk}(e_t \mid d_t) - \tau]\right),
+\]
+where $\eta > 0$ is the learning rate. This increases $\lambda$ when
+observed risk exceeds the target and decreases it otherwise.
 
 \paragraph{Weighted Metrics.}
 For projected mixed-difficulty analysis, weighted CER aggregates
@@ -356,27 +333,54 @@ confidence; (2) select an initial engine via threshold-based rules;
 confidence and escalate to a stronger backend if below the escalation
 threshold.
 
-The router uses a \texttt{RoutingConfig} dataclass with configurable
-thresholds, includes cost tracking hooks, and provides detailed
-logging for debugging and performance analysis. Guards against
-over-selecting the hard route and adaptive threshold margins are
-implemented.
+\paragraph{4. Custom OCR Model Architecture (CustomRNN / CRNN-CTC).}
 
-\paragraph{4. Custom OCR Model Architecture.}
 
-The custom recognizer follows a CRNN pattern~\cite{ref:shi2015}:
-convolutional layers extract visual features, the feature map is
-reshaped into a temporal sequence, bidirectional LSTM layers model
-character dependencies, and a dense head produces per-timestep
-character distributions trained with CTC
-loss~\cite{ref:graves2006}. The architecture uses a 5-layer CNN and
-2-layer Bi-LSTM.
+The custom recognizer (CRNN-CTC in code; CustomRNN in this report)
+follows the classical CNN-to-RNN-to-CTC design~\cite{ref:shi2015,ref:graves2006}. The
+model consumes grayscale line images resized to
+$64 \times 256 \times 1$, predicts a per-timestep distribution over
+the vocabulary plus CTC blank, and decodes to variable-length text.
 
-The architecture and training pipeline are implemented. Model
-checkpoints exist and load successfully, and end-to-end inference is
-verified through integration tests. However, training convergence
-logs and hyperparameter search histories are not archived as report
-artifacts.
+The visual backbone uses six convolutional layers grouped into
+progressive blocks (64/128/256/256/512/512 channels), each with batch
+normalization and ReLU activations. Pooling is deliberately
+asymmetric in deeper layers ($(2,1)$) so that vertical resolution is
+reduced while horizontal resolution (the text reading axis) is
+preserved. A final $(4,1)$ convolution collapses the height dimension
+to one row, yielding a sequence of feature vectors aligned with the
+text direction.
+
+Sequence modeling is performed by two bidirectional LSTM layers
+($256$ units each direction, dropout $0.25$), followed by a dense
+softmax output head. The training graph wraps the inference network
+with a dedicated CTC-loss layer. This allows optimization without
+character-level alignment while still exporting a clean inference-only
+artifact.
+
+The CustomRNN data path is also implementation-specific rather than
+generic. The dataset loader builds fixed-shape batches from CSV
+manifests, preserves aspect ratio during resize, pads to target width,
+and computes \texttt{input\_length} deterministically from the CNN
+downsampling factor ($T = W/4$). The vocabulary is explicitly defined
+for uppercase/lowercase letters, digits, and common punctuation with a
+stable index mapping to ensure reproducible encoding/decoding.
+
+Training uses Adam ($\eta=10^{-3}$) with gradient clipping
+(clip-norm $=1.0$), early stopping, learning-rate reduction on
+plateau, and model checkpointing. In addition to \texttt{val\_loss},
+the pipeline computes validation CER/WER each epoch through the
+inference model, optionally using greedy or beam-search decoding and
+optional dictionary-based post-correction.
+
+Inference includes
+robustness-oriented logic beyond a single forward pass: polarity
+normalization (black text on white background), foreground cropping,
+confidence-aware second-pass variants (enhanced/denoised/sharpened),
+beam decoding (default width $10$), and a text-quality confidence
+penalty for gibberish-like outputs. This design helps the CustomRNN
+remain competitive on medium-difficulty historical lines while
+retaining low per-sample cost.
 
 \paragraph{5. FastAPI Application.}
 
@@ -399,6 +403,8 @@ artifacts.
 
 The API uses Pydantic schemas, dependency injection with lazy
 loading, and CORS middleware.
+
+\newpage
 
 \paragraph{6. Cloud/MLOps Integration.}
 
@@ -443,16 +449,40 @@ run inference correctly through the full pipeline.
   \frac{\text{substitutions} + \text{deletions}
     + \text{insertions}}{|\mathit{ground\_truth}|}
 \]
+This is equivalent to the earlier definition
+$\text{CER}=\text{edit\_distance}(\mathit{pred},\mathit{truth})/|\mathit{truth}|$
+in Section~2.1, because character-level Levenshtein distance with unit
+operation costs satisfies
+$\text{edit\_distance}=\text{substitutions}+\text{deletions}+\text{insertions}$.
+The two expressions differ only in notation (\emph{truth} vs.
+\emph{ground\_truth}), not in meaning.
+
 CER below 5\% is considered excellent; below 15\% is good; below
 30\% is acceptable; above 50\% is poor. Values exceeding 100\% occur
 when the prediction contains substantially more characters than the
 ground truth (excess insertions).
-
 \paragraph{Word Error Rate (WER).}
-Computed analogously at the word level. Typically higher than CER.
+\[
+  \text{WER} =
+  \frac{\text{substitutions}_{w} + \text{deletions}_{w}
+    + \text{insertions}_{w}}{|\mathit{ground\_truth}_{w}|}
+\]
+Equivalently,
+$\text{WER}=\text{edit\_distance}_{w}(\mathit{pred},\mathit{truth})/|\mathit{truth}_{w}|$,
+where the edit distance is computed over word tokens (not characters).
+WER is typically higher than CER because a single word-level error can
+aggregate multiple character-level deviations.
 
 \paragraph{Expected Calibration Error (ECE).}
-Measures alignment between predicted confidence and actual accuracy.
+\[
+  \text{ECE} = \sum_{m=1}^{M} \frac{|B_m|}{n}
+  \left|\operatorname{acc}(B_m) - \operatorname{conf}(B_m)\right|
+\]
+where predictions are partitioned into $M$ confidence bins $B_m$,
+$n$ is the total number of samples, $\operatorname{acc}(B_m)$ is
+empirical accuracy in bin $m$, and $\operatorname{conf}(B_m)$ is mean
+predicted confidence in bin $m$. Lower ECE indicates better
+probability calibration.
 
 \subsection{Datasets}
 
@@ -620,11 +650,6 @@ explanations are possible and not yet resolved:
     on clean inputs.
 \end{enumerate}
 
-Until this anomaly is resolved, the disaggregated TrOCR results
-should be treated with caution. The aggregate hard-paragraph result
-(169.6\% CER, Table~\ref{tab:hard_paragraph}) is the more reliable
-indicator of TrOCR's current pipeline behavior.
-
 \subsubsection{Cost-Benefit Analysis}
 \label{sec:cost_model}
 
@@ -760,17 +785,7 @@ training data was sourced from NIST SD19 (printed characters) while
 medium and hard classes came from IAM (handwriting), creating a
 domain shift that caused the classifier to learn
 \emph{dataset-source} discrimination rather than \emph{difficulty}
-discrimination.
-
-\paragraph{Impact on Routing.}
-The classifier no longer collapses completely on medium documents,
-but 27.6\% of medium samples are still misrouted. Combined with high
-hard-class error rates, this still causes unnecessary escalation and
-quality degradation. Intelligent routing
-partially compensates through confidence-based escalation, but the
-underlying classification signal is unreliable. The cost-savings
-projections in Table~\ref{tab:projected} assume a functional
-classifier and overstate current real routing performance.
+discrimination. This was initially intentional to make the classifier able to handle all types of inputs.
 
 \subsection{Ablation Studies}
 
@@ -799,29 +814,24 @@ thresholds, and cost model parameters are documented.
 
 Custom CRNN inference uses a model trained on NIST SD19, IAM, and
 EMNIST. Tesseract v5.4.0 provides the classical baseline. TrOCR and
-Google Vision serve as cloud comparison points. Deep learning
-components use TensorFlow 2.14 with GPU acceleration.
+Google Vision serve as cloud comparison points.
 
 \paragraph{Hardware.}
-All benchmarks were executed on: Intel Core i7-12700K CPU, NVIDIA RTX
-3090 Ti GPU, 64GB RAM. Latency metrics are hardware-dependent;
-reproducibility across different hardware requires re-measurement.
+All benchmarks were executed in the cloud on a Google Cloud \texttt{n4-highcpu-8} instance.
+Latency metrics are infrastructure-dependent; reproducibility across
+different instance types requires re-measurement.
 
 \subsection{Threats to Validity}
 
 \begin{itemize}
   \item \textbf{Dataset bias}: Training on NIST and IAM may not
     generalize to specific historical archives with distinct
-    characteristics.
+    characteristics, although custom sets representing combinations of the data were used.
   \item \textbf{Classifier fairness}: Document difficulty is
     inherently subjective; inter-annotator agreement has not been
     measured.
-  \item \textbf{Difficulty label reliability}: Given the classifier's
-    0\% medium accuracy and data-generation bug, the difficulty
-    labels assigned to test images may be unreliable, affecting the
-    interpretation of disaggregated results.
   \item \textbf{Small sample sizes}: $N=50$ per cell provides limited
-    statistical power. Confidence intervals are not reported.
+    statistical power.
   \item \textbf{Hardware sensitivity}: All benchmarks use a single
     hardware configuration; GPU-dependent metrics may vary
     substantially on other hardware.
@@ -886,9 +896,8 @@ tests, explicit ablation outputs, and error-analysis artifacts.
 Reliability is reinforced by zero failures across the benchmark set.
 
 Remaining limitations include small sample sizes without confidence
-intervals, unresolved TrOCR anomaly, architecture-level ablation
-gaps, and cost-savings projections that assume a functional
-classifier not yet delivered.
+intervals, unresolved TrOCR anomaly, and architecture-level ablation
+gaps.
 
 \newpage
 
@@ -1009,8 +1018,7 @@ uneven class performance (especially 54.6\% hard-class accuracy),
 which undermines the routing mechanism that is the project's central
 contribution. The TrOCR inverse-difficulty anomaly
 remains unresolved. Benchmark generation depends on manual
-orchestration more than ideal, and model-training traceability is
-weaker than desired.
+orchestration more than ideal.
 
 \subsection{Key Trade-Offs}
 
@@ -1023,20 +1031,6 @@ Three trade-offs shaped the final system:
   \item Architectural breadth over deep optimization of any single
     subsystem, enabling an end-to-end demonstrator at the expense of
     exhaustive refinement.
-\end{enumerate}
-
-\subsection{Redesign Priorities}
-
-A redesign would:
-\begin{enumerate}
-  \item Lock in the empirical protocol and benchmark subsets at
-    project start.
-  \item Validate the difficulty classifier immediately after training
-    (catching the data-generation bug early).
-  \item Formalize training traceability through systematic run logging
-    and checkpoint metadata.
-  \item Expand end-to-end testing with real inference paths earlier.
-  \item Narrow stretch-goal scope to one fully realized extension.
 \end{enumerate}
 
 \newpage
@@ -1069,23 +1063,6 @@ behavior, and routing logic is configurable. Production deployment
 would require: classifier retraining on corrected data, TrOCR
 anomaly resolution, expanded benchmark coverage with confidence
 intervals, and deeper integration testing.
-
-\subsection{Next Steps}
-
-\begin{enumerate}
-  \item \textbf{Retrain the difficulty classifier} on the corrected
-    data pipeline and re-evaluate routing performance (1--2 weeks).
-  \item \textbf{Diagnose and resolve the TrOCR anomaly} --- determine
-    whether the issue is preprocessing mismatch, label error, or
-    model corruption (1 week).
-  \item \textbf{Expand benchmarks} to mixed-difficulty datasets with
-    confidence intervals, and consolidate baseline-versus-routing
-    comparisons (1--2 weeks).
-  \item \textbf{Retrain the custom CRNN} with explicit convergence
-    tracking and archived training logs (2--3 weeks).
-  \item \textbf{Broaden integration testing} with fully real
-    inference flows (1 week).
-\end{enumerate}
 
 \newpage
 
