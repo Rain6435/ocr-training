@@ -26,29 +26,26 @@
 \title{
   \textbf{Multi-Stage Historical Document Digitization Pipeline} \\
   \large\textit{Project Report} \\
-  \normalsize SEG4180 Academic Course \\
+  \normalsize SEG4180 \\
   April 4, 2026
 }
 \author{Mohammed Elhasnaoui (ID: 300268139)}
-\date{\today}
 
 \begin{document}
 
 \maketitle
 
 \begin{abstract}
-This report presents a technical evaluation of an intelligent,
-cost-efficient OCR pipeline designed for historical document
-digitization. The system implements a multi-stage architecture
-combining image preprocessing, document difficulty classification,
-intelligent routing, and multi-engine OCR processing. The core
-innovation is a custom CNN-LSTM-CTC model integrated with Tesseract
-and TrOCR for cost optimization. Training leverages public handwriting
-datasets (NIST SD19, IAM, EMNIST). The difficulty classifiern was trained using 14,403 curated and labeled difficulty
-images on Google Cloud Vertex AI. The report documents system design
-decisions, implementation details, empirical performance on
-stress-test and disaggregated subsets, research grounding, and
-lessons learned from multi-stage cloud-based training workflows.
+This report presents a technical evaluation of an intelligent, cost-efficient
+OCR pipeline for historical document digitization. The system implements a
+multi-stage architecture combining image preprocessing, document-difficulty
+classification, confidence-aware routing, and multi-engine OCR inference. The
+main engineering contribution is the integration of a custom CNN-LSTM-CTC
+recognizer with Tesseract and TrOCR to operationalize cost-accuracy
+trade-offs across document difficulty levels. The report
+documents system design decisions, implementation details, empirical results
+across disaggregated difficulty subsets, and lessons learned from multi-stage
+cloud-based training workflows.
 \end{abstract}
 
 \newpage
